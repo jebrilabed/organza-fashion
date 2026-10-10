@@ -4,10 +4,12 @@ import { StorefrontSubmitButton } from "@/components/storefront/submit-button";
 import { clearCartAction, removeCartItemAction, updateCartQuantityAction } from "../actions";
 import { getCartSnapshot, isCartLineAvailable, isCartLineSellable } from "@/lib/storefront/cart";
 import { Prisma } from "@/generated/prisma/client";
-import { displayVariantOptions, formatMoney } from "@/lib/storefront/format";
+import { formatMoney } from "@/lib/storefront/format";
+import { VariantOptionsDisplay } from "@/components/storefront/variant-options-display";
 import { storefrontMessages as messages } from "@/lib/storefront/messages";
 import { getStoreCurrency } from "@/lib/storefront/orders";
 import { SafeProductImage } from "@/components/storefront/safe-product-image";
+import { ToastMessage } from "@/components/ui/toast";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
@@ -34,7 +36,7 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
     <main className="store-main">
       <Container>
         <header className="store-page-heading"><h1>{messages.ar.cartTitle}</h1></header>
-        {notice && notices[notice] && <p className={`store-alert ${notice === "added" ? "store-alert--success" : "store-alert--error"}`} role="status">{notices[notice]}</p>}
+        <ToastMessage message={notice ? notices[notice] : undefined} tone={notice === "added" || notice === "updated" || notice === "removed" || notice === "cleared" ? "success" : "error"} />
         {!items.length ? (
           <div className="ui-state"><span className="ui-state__symbol" aria-hidden="true">◇</span><h2>{messages.ar.cartEmpty}</h2><Link className="ui-button ui-button--primary" href="/ar">{messages.ar.continueShopping}</Link></div>
         ) : (
@@ -51,7 +53,7 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
                     <div className="store-cart-item__image">{image ? <SafeProductImage alt={image.altText || translation?.name || messages.ar.product} sizes="96px" src={image.url} /> : <span>{messages.ar.noImage}</span>}</div>
                     <div className="store-cart-item__content">
                       <h2>{translation ? <Link href={`/ar/products/${encodeURIComponent(translation.slug)}`}>{translation.name}</Link> : messages.ar.unavailableItem}</h2>
-                      {displayVariantOptions(item.sku.variantOptions) && <p className="store-muted">{displayVariantOptions(item.sku.variantOptions)}</p>}
+                      <p className="store-muted"><VariantOptionsDisplay options={item.sku.variantOptions} /></p>
                       <p>{currency ? <>{messages.ar.price}: {formatMoney(item.sku.price, currency)} · {messages.ar.lineTotal}: <strong>{formatMoney(lineTotal, currency)}</strong></> : messages.ar.currencyUnavailable}</p>
                       {!available && <Badge variant="error">{messages.ar.unavailableItem}</Badge>}
                       <div className="store-cart-item__actions">

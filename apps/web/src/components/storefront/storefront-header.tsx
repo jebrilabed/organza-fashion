@@ -31,10 +31,11 @@ export async function StorefrontHeader() {
   }
   return (
     <header className="store-header">
+      <div className="store-header__announcement">organza fashion <span aria-hidden="true">·</span> أناقة التفاصيل في كل إطلالة</div>
       <div className="page-container store-header__inner">
         <Link href="/ar" className="store-brand" aria-label={`${storeName} — ${messages.ar.home}`}>
           <span className="store-brand__mark">
-            <Image alt="" height={60} src="/brand/shimo-logo.png" width={60} />
+            <Image alt="" height={60} src="/brand/organza-fashion.png" width={60} />
           </span>
           <span className="store-brand__name">{storeName}</span>
         </Link>
@@ -42,6 +43,10 @@ export async function StorefrontHeader() {
           <Link href="/ar">{messages.ar.home}</Link>
           <Link href="/ar/products">{messages.ar.products}</Link>
           {isSignedIn && <Link href="/ar/orders">{messages.ar.orderHistory}</Link>}
+          <form action="/ar/search" className="store-header__search" method="get">
+            <input aria-label={messages.ar.search} maxLength={100} name="q" placeholder="ابحثي في التشكيلة" type="search" />
+            <button aria-label="بحث" type="submit"><SearchIcon /></button>
+          </form>
         </nav>
         <div className="store-header__actions">
           <Link aria-label={accountLabel} className="store-icon-link store-header__account" href={accountHref}>
@@ -62,6 +67,10 @@ export async function StorefrontHeader() {
               <Link href="/ar">{messages.ar.home}</Link>
               <Link href="/ar/products">{messages.ar.products}</Link>
               {isSignedIn && <Link href="/ar/orders">{messages.ar.orderHistory}</Link>}
+              <form action="/ar/search" method="get">
+                <input aria-label={messages.ar.search} maxLength={100} name="q" placeholder="ابحثي في التشكيلة" type="search" />
+                <button type="submit">بحث</button>
+              </form>
               <Link href={accountHref}>{accountLabel}</Link>
               <Link href="/ar/register">{messages.ar.register}</Link>
             </nav>
@@ -82,4 +91,8 @@ function CartIcon() {
 
 function MenuIcon() {
   return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h16" /></svg>;
+}
+
+function SearchIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><circle cx="10.8" cy="10.8" r="6.8" /><path d="m16 16 4 4" /></svg>;
 }

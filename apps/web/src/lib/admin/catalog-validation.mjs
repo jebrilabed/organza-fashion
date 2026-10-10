@@ -62,6 +62,94 @@ function uploadedImageAssets(value) {
   return { images, error: null };
 }
 
+export function parseVariantData(formData, errors) {
+  const hasVariants = formData.get("hasVariants") === "true" || formData.get("hasVariants") === "on";
+  if (!hasVariants) {
+    return { hasVariants: false, colors: [], sizes: [], variants: [] };
+  }
+
+  const colorsRaw = text(formData.get("colorsJson"));
+  const sizesRaw = text(formData.get("sizesJson"));
+  const variantsRaw = text(formData.get("variantsJson"));
+
+  let colors = [];
+  let sizes = [];
+  let variants = [];
+
+  try {
+    if (colorsRaw) colors = JSON.parse(colorsRaw);
+  } catch {
+    errors.variants = "invalidVariants";
+  }
+
+  try {
+    if (sizesRaw) sizes = JSON.parse(sizesRaw);
+  } catch {
+    errors.variants = "invalidVariants";
+  }
+
+  try {
+    if (variantsRaw) variants = JSON.parse(variantsRaw);
+  } catch {
+    errors.variants = "invalidVariants";
+  }
+
+  if (!Array.isArray(colors)) colors = [];
+  if (!Array.isArray(sizes)) sizes = [];
+  if (!Array.isArray(variants)) variants = [];
+
+  const validColors = colors
+    .filter((c) => c && typeof c === "object" && typeof c.name === "string" && c.name.trim())
+    .map((c) => ({
+      name: c.name.trim().slice(0, 50),
+      hex: typeof c.hex === "string" && /^#[0-9A-Fa-f]{6}$/.test(c.hex.trim()) ? c.hex.trim() : "#000000",
+    }));
+
+  const validSizes = sizes
+    .filter((s) => typeof s === "string" && s.trim())
+    .map((s) => s.trim().slice(0, 30));
+
+  const validVariants = [];
+  const seenCombinations = new Set();
+
+  for (const v of variants) {
+    if (!v || typeof v !== "object") continue;
+    const colorName = typeof v.colorName === "string" ? v.colorName.trim() : "";
+    const sizeLabel = typeof v.sizeLabel === "string" ? v.sizeLabel.trim() : "";
+    const key = `${colorName.toLowerCase()}|||${sizeLabel.toLowerCase()}`;
+    if (seenCombinations.has(key)) continue;
+    seenCombinations.add(key);
+
+    const colorObj = validColors.find((c) => c.name.toLowerCase() === colorName.toLowerCase());
+    const hex = colorObj ? colorObj.hex : (typeof v.colorHex === "string" && /^#[0-9A-Fa-f]{6}$/.test(v.colorHex.trim()) ? v.colorHex.trim() : "#000000");
+
+    let qty = 0;
+    if (typeof v.stockQuantity === "number") {
+      qty = Math.max(0, Math.floor(v.stockQuantity));
+    } else if (typeof v.stockQuantity === "string" && /^(0|[1-9]\d{0,8})$/.test(v.stockQuantity.trim())) {
+      qty = Number(v.stockQuantity.trim());
+    }
+
+    validVariants.push({
+      colorName,
+      colorHex: hex,
+      sizeLabel,
+      stockQuantity: qty,
+    });
+  }
+
+  if (validVariants.length === 0) {
+    errors.variants = "requiredVariants";
+  }
+
+  return {
+    hasVariants: true,
+    colors: validColors,
+    sizes: validSizes,
+    variants: validVariants,
+  };
+}
+
 export function parseProductInput(formData) {
   const errors = {};
   const nameAr = text(formData.get("nameAr"));
@@ -78,9 +166,10 @@ export function parseProductInput(formData) {
   const price = money(formData.get("price"), true, errors, "price");
   const compareAtPrice = money(formData.get("compareAtPrice"), false, errors, "compareAtPrice");
   const stockRaw = text(formData.get("stockQuantity"));
-  const stockQuantity = /^(0|[1-9]\d{0,8})$/.test(stockRaw) ? Number(stockRaw) : null;
+  const stockQuantity = /^(0|[1-9]\d{0,8})$/.test(stockRaw) ? Number(stockRaw) : (formData.get("hasVariants") === "true" || formData.get("hasVariants") === "on" ? 0 : null);
   const imageResult = optionalHttpsUrls(formData.get("imageUrls"));
   const imageAssetResult = uploadedImageAssets(formData.get("imageAssets"));
+  const variantData = parseVariantData(formData, errors);
 
   if (!nameAr) errors.nameAr = "required";
   else if (nameAr.length > 160) errors.nameAr = "tooLong";
@@ -93,7 +182,7 @@ export function parseProductInput(formData) {
   if (seoDescriptionAr.length > 500) errors.seoDescriptionAr = "tooLong";
   if (seoTitleEn.length > 180) errors.seoTitleEn = "tooLong";
   if (seoDescriptionEn.length > 500) errors.seoDescriptionEn = "tooLong";
-  if (stockQuantity === null) errors.stockQuantity = "invalidStock";
+  if (!variantData.hasVariants && stockQuantity === null) errors.stockQuantity = "invalidStock";
   if (imageResult.error) errors.imageUrls = imageResult.error;
   if (imageAssetResult.error) errors.imageUrls = imageAssetResult.error;
   if (!imageResult.error && !imageAssetResult.error && imageResult.urls.length + imageAssetResult.images.length > 8) errors.imageUrls = "tooManyImages";
@@ -118,10 +207,14 @@ export function parseProductInput(formData) {
       categoryId,
       price,
       compareAtPrice,
-      stockQuantity,
+      stockQuantity: variantData.hasVariants ? variantData.variants.reduce((sum, v) => sum + v.stockQuantity, 0) : (stockQuantity ?? 0),
       imageUrls: imageResult.urls,
       uploadedImages: imageAssetResult.images,
-      isActive: formData.get("isActive") === "on",
+      isActive: formData.get("isActive") === "on" || formData.get("isActive") === "true",
+      hasVariants: variantData.hasVariants,
+      variantColors: variantData.colors,
+      variantSizes: variantData.sizes,
+      variants: variantData.variants,
     },
   };
 }

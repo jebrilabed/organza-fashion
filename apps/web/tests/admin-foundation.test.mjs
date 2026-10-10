@@ -73,3 +73,26 @@ test("ADMIN authorization completes before the mutation callback", async () => {
   const result = await executeAdminMutation(async () => actor, async (admin) => ({ actorId: admin.id }));
   assert.deepEqual(result, { ok: true, value: { actorId: "admin_1" } });
 });
+
+test("product validation parses custom colors, sizes, and variant matrix quantities", () => {
+  const variantForm = form({
+    ...validProduct,
+    hasVariants: "true",
+    colorsJson: JSON.stringify([{ name: "Black", hex: "#000000" }, { name: "White", hex: "#FFFFFF" }]),
+    sizesJson: JSON.stringify(["S", "M"]),
+    variantsJson: JSON.stringify([
+      { colorName: "Black", colorHex: "#000000", sizeLabel: "S", stockQuantity: 5 },
+      { colorName: "Black", colorHex: "#000000", sizeLabel: "M", stockQuantity: 3 },
+      { colorName: "White", colorHex: "#FFFFFF", sizeLabel: "S", stockQuantity: 4 },
+      { colorName: "White", colorHex: "#FFFFFF", sizeLabel: "M", stockQuantity: 0 },
+    ]),
+  });
+  const parsed = parseProductInput(variantForm);
+  assert.equal(parsed.ok, true);
+  assert.equal(parsed.value.hasVariants, true);
+  assert.equal(parsed.value.stockQuantity, 12);
+  assert.equal(parsed.value.variants.length, 4);
+  assert.deepEqual(parsed.value.variantColors, [{ name: "Black", hex: "#000000" }, { name: "White", hex: "#FFFFFF" }]);
+  assert.deepEqual(parsed.value.variantSizes, ["S", "M"]);
+});
+

@@ -3,7 +3,8 @@ import { notFound, redirect } from "next/navigation";
 import { Badge, Card, Container } from "@/components/ui";
 import { getCurrentUser } from "@/lib/auth/authorization";
 import { prisma } from "@/lib/db/prisma";
-import { addressParts, displayVariantOptions, formatMoney } from "@/lib/storefront/format";
+import { addressParts, formatMoney } from "@/lib/storefront/format";
+import { VariantOptionsDisplay } from "@/components/storefront/variant-options-display";
 import { orderStatusLabel, paymentStatusLabel } from "@/lib/storefront/order-labels";
 import { storefrontMessages as messages } from "@/lib/storefront/messages";
 
@@ -45,7 +46,7 @@ export default async function MyOrderDetails({ params }: { params: Promise<{ ord
             <table className="store-order-items-table">
               <thead><tr><th>{messages.ar.product}</th><th>{messages.ar.price}</th><th>{messages.ar.quantity}</th><th>{messages.ar.lineTotal}</th></tr></thead>
               <tbody>{order.items.map((item) => <tr key={item.id}>
-                <td>{item.productNameSnapshot}{displayVariantOptions(item.variantSnapshot) && <small>{displayVariantOptions(item.variantSnapshot)}</small>}</td>
+                <td>{item.productNameSnapshot}<div className="mt-1"><VariantOptionsDisplay options={item.variantSnapshot} /></div></td>
                 <td>{formatMoney(item.unitPrice, order.currency)}</td>
                 <td>{item.quantity}</td>
                 <td>{formatMoney(item.subtotal, order.currency)}</td>

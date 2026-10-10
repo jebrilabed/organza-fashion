@@ -1,6 +1,6 @@
 export const storefrontMessages = {
   ar: {
-    brand: "Shimo Gift",
+    brand: "organza fashion",
     admin: "لوحة الإدارة",
     home: "الرئيسية",
     products: "المنتجات",
@@ -28,6 +28,11 @@ export const storefrontMessages = {
     quantity: "الكمية",
     variant: "الخيار",
     chooseVariant: "اختر الخيار",
+    color: "اللون",
+    size: "المقاس",
+    selectColor: "اختر اللون",
+    selectSize: "اختر المقاس",
+    selectVariantOptions: "يرجى اختيار اللون والمقاس المطلوبة قبل الإضافة للسلة.",
     addToCart: "أضف إلى السلة",
     added: "تمت إضافة المنتج إلى السلة.",
     unavailable: "هذا المنتج غير متاح حالياً.",

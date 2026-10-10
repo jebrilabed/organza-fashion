@@ -102,3 +102,54 @@ export async function moveImage(_previous: ManagementState, data: FormData): Pro
   catch { return { error: messages.ar.imageMoveFailed }; }
   revalidatePath(`/admin/products/${productId}`); revalidatePath("/ar"); revalidatePath("/ar/products/[slug]", "page"); return { success: messages.ar.imageMoved };
 }
+
+export async function assignImageColor(_previous: ManagementState, data: FormData): Promise<ManagementState> {
+  let admin; try { admin = await requireAdmin(); } catch { return { error: messages.ar.imageUnauthorized }; }
+  const productId = fieldText(data, "productId");
+  const imageUrl = fieldText(data, "imageUrl");
+  const colorName = fieldText(data, "colorName");
+
+  if (!productId || !imageUrl) return { error: "معلومات مفقودة" };
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const skus = await tx.productSku.findMany({ where: { productId } });
+      for (const sku of skus) {
+        if (!sku.variantOptions || typeof sku.variantOptions !== "object") continue;
+        const opts = sku.variantOptions as Record<string, string>;
+        
+        let changed = false;
+        
+        // If they chose a color, assign it to that color (and remove from others if they had this image?)
+        // Let's just remove this image from ANY color that has it currently
+        if (opts["ColorImageUrl"] === imageUrl) {
+          delete opts["ColorImageUrl"];
+          changed = true;
+        }
+
+        // Now assign to the new color if provided
+        if (colorName && opts["Color"] === colorName) {
+          opts["ColorImageUrl"] = imageUrl;
+          changed = true;
+        }
+
+        if (changed) {
+          await tx.productSku.update({
+            where: { id: sku.id },
+            data: { variantOptions: opts }
+          });
+        }
+      }
+      
+      await tx.adminAuditLog.create({ 
+        data: { actorUserId: admin.id, action: "catalog.image.assign_color", entityType: "Product", entityId: productId, metadata: { imageUrl, colorName } } 
+      });
+    });
+  } catch (error) {
+    return { error: "حدث خطأ أثناء ربط الصورة باللون" };
+  }
+  revalidatePath(`/admin/products/${productId}`); 
+  revalidatePath("/ar"); 
+  revalidatePath("/ar/products/[slug]", "page");
+  return { success: "تم تحديث لون الصورة بنجاح" };
+}

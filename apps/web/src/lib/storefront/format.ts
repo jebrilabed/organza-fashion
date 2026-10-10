@@ -9,8 +9,22 @@ export function formatMoney(amount: Prisma.Decimal | string, currency: string, l
 
 export function displayVariantOptions(value: Prisma.JsonValue | null) {
   if (!value || Array.isArray(value) || typeof value !== "object") return "";
-  return Object.entries(value)
-    .filter(([, option]) => typeof option === "string" || typeof option === "number" || typeof option === "boolean")
+  const record = value as Record<string, unknown>;
+  const parts: string[] = [];
+
+  if (record["Color"] && typeof record["Color"] === "string") {
+    parts.push(`${record["Color"]}`);
+  }
+  if (record["Size"] && (typeof record["Size"] === "string" || typeof record["Size"] === "number")) {
+    parts.push(`${record["Size"]}`);
+  }
+
+  if (parts.length > 0) {
+    return parts.join(" / ");
+  }
+
+  return Object.entries(record)
+    .filter(([key, option]) => key !== "ColorHex" && (typeof option === "string" || typeof option === "number" || typeof option === "boolean"))
     .map(([key, option]) => `${key}: ${String(option)}`)
     .join(" · ");
 }

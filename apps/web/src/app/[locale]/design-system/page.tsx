@@ -21,7 +21,7 @@ import {
 } from "@/components/ui";
 
 export const metadata = {
-  title: "معرض نظام التصميم | Shimo Gift",
+  title: "معرض نظام التصميم | organza fashion",
   robots: { index: false, follow: false },
 };
 
@@ -73,13 +73,13 @@ export default async function DesignSystemPage({ params }: { params: Promise<{ l
             <div className="ui-demo__grid ui-demo__grid--two">
               <div className="ui-demo__logo">
                 <Image
-                  src="/brand/shimo-logo.png"
-                  alt="شعار Shimo Gift"
+                  src="/brand/organza-fashion.png"
+                  alt="شعار organza fashion"
                   width={320}
                   height={320}
                   unoptimized
                 />
-                <p>شعار Shimo Gift بصيغة PNG، معروض دون تغيير أو انعكاس.</p>
+                <p>شعار organza fashion بصيغة PNG، معروض دون تغيير أو انعكاس.</p>
               </div>
               <div className="ui-demo__stack">
                 <p>
@@ -87,7 +87,7 @@ export default async function DesignSystemPage({ params }: { params: Promise<{ l
                   الواجهة العربية.
                 </p>
                 <div className="ui-demo__notice">
-                  ألوان الواجهة متناسقة مع هوية Shimo Gift، مع ضبط تباين النصوص والأزرار لضمان وضوحها.
+                  ألوان الواجهة متناسقة مع هوية organza fashion، مع ضبط تباين النصوص والأزرار لضمان وضوحها.
                 </div>
               </div>
             </div>

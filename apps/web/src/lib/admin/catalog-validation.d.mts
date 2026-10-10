@@ -1,3 +1,10 @@
+type ProductVariantItem = {
+  colorName: string;
+  colorHex: string;
+  sizeLabel: string;
+  stockQuantity: number;
+};
+
 type ProductInput = {
   nameAr: string;
   nameEn: string;
@@ -16,6 +23,10 @@ type ProductInput = {
   imageUrls: string[];
   uploadedImages: { url: string; publicId: string }[];
   isActive: boolean;
+  hasVariants: boolean;
+  variantColors: { name: string; hex: string }[];
+  variantSizes: string[];
+  variants: ProductVariantItem[];
 };
 
 type CategoryInput = {

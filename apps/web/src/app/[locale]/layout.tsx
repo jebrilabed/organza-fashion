@@ -6,10 +6,9 @@ import { siteConfig } from "@/lib/config/site";
 import { getPublicSiteData } from "@/lib/seo/site-data";
 import { StorefrontHeader } from "@/components/storefront/storefront-header";
 import { StorefrontFooter } from "@/components/storefront/storefront-footer";
-import { StoreAssistantLauncher } from "@/components/storefront/store-assistant-launcher";
+import { ToastProvider } from "@/components/ui/toast";
 import "../globals.css";
 import "./storefront.css";
-import "./assistant.css";
 
 type LocaleLayoutProps = {
   children: ReactNode;
@@ -50,10 +49,11 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
   return (
     <html lang={locale} dir={getLocaleDirection(locale)} data-scroll-behavior="smooth">
       <body>
-        <StorefrontHeader />
-        {children}
-        <StoreAssistantLauncher locale={locale} />
-        <StorefrontFooter />
+        <ToastProvider>
+          <StorefrontHeader />
+          {children}
+          <StorefrontFooter />
+        </ToastProvider>
       </body>
     </html>
   );

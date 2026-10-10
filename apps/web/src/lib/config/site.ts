@@ -8,6 +8,6 @@ function readSiteUrl(value: string | undefined): URL | null {
 }
 
 export const siteConfig = {
-  name: "Shimo Gift",
+  name: "organza fashion",
   url: readSiteUrl(process.env.SITE_URL),
 } as const;

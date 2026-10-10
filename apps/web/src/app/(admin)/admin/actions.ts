@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@/generated/prisma/client";
-import { CategoryStatus, Locale, ProductStatus } from "@/generated/prisma/enums";
+import { CartStatus, CategoryStatus, Locale, OrderStatus, ProductKind, ProductStatus } from "@/generated/prisma/enums";
 import { requireAdmin } from "@/lib/auth/authorization";
 import { adminMessages } from "@/lib/admin/messages";
 import type { AdminActionState } from "@/lib/admin/config";
@@ -158,27 +158,27 @@ export async function saveProduct(_previous: AdminActionState, formData: FormDat
     const existing = productId
       ? await prisma.product.findUnique({
         where: { id: productId },
-          select: { id: true, status: true, kind: true, translations: { select: { locale: true, slug: true } }, skus: { orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }], take: 1, select: { id: true, skuCode: true, isDefault: true } } },
+          select: {
+            id: true,
+            status: true,
+            kind: true,
+            translations: { select: { locale: true, slug: true } },
+            skus: { select: { id: true, skuCode: true, isDefault: true, variantOptions: true } },
+          },
         })
       : null;
     if (productId && !existing) return { error: messages.productNotFound };
-    const existingSku = existing?.skus[0];
-    const skuCode = existingSku?.skuCode ?? await generateProductSkuCode();
 
     const translations = [
       { locale: Locale.AR, name: input.nameAr, slug: input.slug, description: input.descriptionAr || null, seoTitle: input.seoTitleAr || null, seoDescription: input.seoDescriptionAr || null },
       ...(input.nameEn ? [{ locale: Locale.EN, name: input.nameEn, slug: input.slug, description: input.descriptionEn || null, seoTitle: input.seoTitleEn || null, seoDescription: input.seoDescriptionEn || null }] : []),
     ];
-    const skuData = {
-      skuCode,
-      price: new Prisma.Decimal(input.price),
-      compareAtPrice: input.compareAtPrice ? new Prisma.Decimal(input.compareAtPrice) : null,
-      stockQuantity: input.stockQuantity,
-      isDefault: existing?.kind === "VARIANT" ? (existingSku?.isDefault ?? false) : true,
-      isActive: input.isActive,
-    };
+
+    const productKind = input.hasVariants ? ProductKind.VARIANT : ProductKind.SIMPLE;
+
     const productData = {
       slug: input.slug,
+      kind: productKind,
       status: existing?.status === ProductStatus.ARCHIVED && !input.isActive ? ProductStatus.ARCHIVED : productStatus(input.isActive),
       categoryId: input.categoryId,
       seoTitle: input.seoTitleAr || null,
@@ -191,9 +191,7 @@ export async function saveProduct(_previous: AdminActionState, formData: FormDat
         const created = await tx.product.create({
           data: {
             ...productData,
-            kind: "SIMPLE",
             translations: { create: translations },
-            skus: { create: skuData },
             images: { create: [
               ...input.imageUrls.map((url) => ({ url, providerPublicId: null, altText: input.nameAr })),
               ...input.uploadedImages.map(({ url, publicId }) => ({ url, providerPublicId: publicId, altText: input.nameAr })),
@@ -202,9 +200,54 @@ export async function saveProduct(_previous: AdminActionState, formData: FormDat
           select: { id: true },
         });
         id = created.id;
+
+        if (input.hasVariants) {
+          for (let i = 0; i < input.variants.length; i++) {
+            const v = input.variants[i];
+            const variantSkuCode = await generateProductSkuCode();
+            const variantOptions: Record<string, string> = {};
+            if (v.colorName) {
+              variantOptions["Color"] = v.colorName;
+              if (v.colorHex) variantOptions["ColorHex"] = v.colorHex;
+              if (v.colorImageUrl) variantOptions["ColorImageUrl"] = v.colorImageUrl;
+            }
+            if (v.sizeLabel) {
+              variantOptions["Size"] = v.sizeLabel;
+            }
+            await tx.productSku.create({
+              data: {
+                productId: id,
+                skuCode: variantSkuCode,
+                price: new Prisma.Decimal(input.price),
+                compareAtPrice: input.compareAtPrice ? new Prisma.Decimal(input.compareAtPrice) : null,
+                stockQuantity: v.stockQuantity,
+                isDefault: i === 0,
+                isActive: input.isActive,
+                variantOptions,
+              },
+            });
+          }
+        } else {
+          const skuCode = await generateProductSkuCode();
+          await tx.productSku.create({
+            data: {
+              productId: id,
+              skuCode,
+              price: new Prisma.Decimal(input.price),
+              compareAtPrice: input.compareAtPrice ? new Prisma.Decimal(input.compareAtPrice) : null,
+              stockQuantity: input.stockQuantity,
+              isDefault: true,
+              isActive: input.isActive,
+              variantOptions: Prisma.JsonNull,
+            },
+          });
+        }
       } else {
         id = existing.id;
         await tx.product.update({ where: { id }, data: productData });
+        // Reset default SKUs to avoid unique constraint violation
+        await tx.productSku.updateMany({ where: { productId: id }, data: { isDefault: false } });
+
         for (const translation of translations) {
           await tx.productTranslation.upsert({
             where: { productId_locale: { productId: id, locale: translation.locale } },
@@ -212,6 +255,7 @@ export async function saveProduct(_previous: AdminActionState, formData: FormDat
             update: { name: translation.name, slug: translation.slug, shortDescription: null, description: translation.description, seoTitle: translation.seoTitle, seoDescription: translation.seoDescription },
           });
         }
+
         for (const previous of existing.translations) {
           const nextTranslation = translations.find((translation) => translation.locale === previous.locale);
           if (nextTranslation && previous.slug !== nextTranslation.slug) {
@@ -220,8 +264,112 @@ export async function saveProduct(_previous: AdminActionState, formData: FormDat
           }
         }
         if (!input.nameEn) await tx.productTranslation.deleteMany({ where: { productId: id, locale: Locale.EN } });
-        if (existingSku) await tx.productSku.update({ where: { id: existingSku.id }, data: skuData });
-        else await tx.productSku.create({ data: { ...skuData, productId: id } });
+
+        if (input.hasVariants) {
+          const existingSkus = existing.skus;
+          const matchedSkuIds = new Set<string>();
+
+          for (let i = 0; i < input.variants.length; i++) {
+            const v = input.variants[i];
+            const colorName = v.colorName.toLowerCase();
+            const sizeLabel = v.sizeLabel.toLowerCase();
+
+            const existingMatch = existingSkus.find((s) => {
+              if (matchedSkuIds.has(s.id)) return false;
+              if (!s.variantOptions || typeof s.variantOptions !== "object") return false;
+              const opts = s.variantOptions as Record<string, string>;
+              const matchColor = (opts["Color"] ?? "").toLowerCase() === colorName;
+              const matchSize = (opts["Size"] ?? "").toLowerCase() === sizeLabel;
+              return matchColor && matchSize;
+            });
+
+            const variantOptions: Record<string, string> = {};
+            if (v.colorName) {
+              variantOptions["Color"] = v.colorName;
+              if (v.colorHex) variantOptions["ColorHex"] = v.colorHex;
+              if (v.colorImageUrl) variantOptions["ColorImageUrl"] = v.colorImageUrl;
+            }
+            if (v.sizeLabel) {
+              variantOptions["Size"] = v.sizeLabel;
+            }
+
+            if (existingMatch) {
+              matchedSkuIds.add(existingMatch.id);
+              await tx.productSku.update({
+                where: { id: existingMatch.id },
+                data: {
+                  price: new Prisma.Decimal(input.price),
+                  compareAtPrice: input.compareAtPrice ? new Prisma.Decimal(input.compareAtPrice) : null,
+                  stockQuantity: v.stockQuantity,
+                  isActive: input.isActive,
+                  isDefault: i === 0,
+                  variantOptions,
+                },
+              });
+            } else {
+              const variantSkuCode = await generateProductSkuCode();
+              await tx.productSku.create({
+                data: {
+                  productId: id,
+                  skuCode: variantSkuCode,
+                  price: new Prisma.Decimal(input.price),
+                  compareAtPrice: input.compareAtPrice ? new Prisma.Decimal(input.compareAtPrice) : null,
+                  stockQuantity: v.stockQuantity,
+                  isDefault: i === 0,
+                  isActive: input.isActive,
+                  variantOptions,
+                },
+              });
+            }
+          }
+
+          // Handle unmatched SKUs that are removed by admin
+          const removedSkus = existingSkus.filter((s) => !matchedSkuIds.has(s.id));
+          for (const removedSku of removedSkus) {
+            // Check if SKU is used in orders
+            const orderCount = await tx.orderItem.count({ where: { skuId: removedSku.id } });
+            if (orderCount > 0) {
+              // Soft deactivate SKU to preserve order history
+              await tx.productSku.update({
+                where: { id: removedSku.id },
+                data: { isActive: false, stockQuantity: 0, isDefault: false },
+              });
+            } else {
+              // Safe to delete cart items and SKU
+              await tx.cartItem.deleteMany({ where: { skuId: removedSku.id } });
+              await tx.productSku.delete({ where: { id: removedSku.id } });
+            }
+          }
+        } else {
+          // SIMPLE product
+          const defaultSku = existing.skus.find((s) => s.isDefault) ?? existing.skus[0];
+          const skuData = {
+            price: new Prisma.Decimal(input.price),
+            compareAtPrice: input.compareAtPrice ? new Prisma.Decimal(input.compareAtPrice) : null,
+            stockQuantity: input.stockQuantity,
+            isDefault: true,
+            isActive: input.isActive,
+            variantOptions: Prisma.JsonNull,
+          };
+
+          if (defaultSku) {
+            await tx.productSku.update({ where: { id: defaultSku.id }, data: skuData });
+            // Deactivate any extra SKUs if product converted from VARIANT to SIMPLE
+            const extraSkus = existing.skus.filter((s) => s.id !== defaultSku.id);
+            for (const extra of extraSkus) {
+              const orderCount = await tx.orderItem.count({ where: { skuId: extra.id } });
+              if (orderCount > 0) {
+                await tx.productSku.update({ where: { id: extra.id }, data: { isActive: false, stockQuantity: 0, isDefault: false } });
+              } else {
+                await tx.cartItem.deleteMany({ where: { skuId: extra.id } });
+                await tx.productSku.delete({ where: { id: extra.id } });
+              }
+            }
+          } else {
+            const skuCode = await generateProductSkuCode();
+            await tx.productSku.create({ data: { ...skuData, skuCode, productId: id } });
+          }
+        }
       }
       await tx.adminAuditLog.create({
         data: {
@@ -229,7 +377,7 @@ export async function saveProduct(_previous: AdminActionState, formData: FormDat
           action: existing ? "catalog.product.update" : "catalog.product.create",
           entityType: "Product",
           entityId: id,
-          metadata: { slug: input.slug, skuCode },
+          metadata: { slug: input.slug, hasVariants: input.hasVariants },
         },
       });
       return id;
@@ -243,7 +391,7 @@ export async function saveProduct(_previous: AdminActionState, formData: FormDat
     revalidatePath("/ar/products");
     revalidatePath("/ar/products/[slug]", "page");
     revalidatePath("/sitemap.xml");
-    return { success: messages.productSaved, ...(!productId ? { redirectTo: "/admin/products" } : {}) };
+    return { success: messages.productSaved, redirectTo: "/admin/products" };
   });
 }
 
@@ -366,7 +514,7 @@ export async function saveCategory(_previous: AdminActionState, formData: FormDa
     revalidatePath("/ar/categories/[slug]", "page");
     revalidatePath("/ar/products/[slug]", "page");
     revalidatePath("/sitemap.xml");
-    return { success: messages.categorySaved, ...(!categoryId ? { redirectTo: "/admin/categories" } : {}) };
+    return { success: messages.categorySaved, redirectTo: "/admin/categories" };
   });
 }
 
@@ -418,6 +566,78 @@ export async function archiveProduct(_previous: AdminActionState, formData: Form
     revalidatePath("/admin/inventory");
     revalidatePath("/ar"); revalidatePath("/ar/products"); revalidatePath("/ar/products/[slug]", "page"); revalidatePath("/sitemap.xml");
     return { success: messages.productArchived };
+  });
+}
+
+export async function deleteProduct(_previous: AdminActionState, formData: FormData): Promise<AdminActionState> {
+  return runAdminAction(async (admin): Promise<AdminActionState> => {
+    const id = String(formData.get("productId") ?? "").trim();
+    if (!id || id.length > 64) return { error: messages.productNotFound };
+
+    const result = await prisma.$transaction(async (tx) => {
+      const locked = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
+        SELECT "id" FROM "products" WHERE "id" = ${id} FOR UPDATE
+      `);
+      if (!locked.length) return "missing" as const;
+
+      const product = await tx.product.findUnique({
+        where: { id },
+        select: { id: true, slug: true, skus: { select: { id: true } } },
+      });
+      if (!product) return "missing" as const;
+
+      const skuIds = product.skus.map(({ id: skuId }) => skuId);
+      if (skuIds.length) {
+        const orderItems = await tx.orderItem.findMany({
+          where: { skuId: { in: skuIds } },
+          select: { order: { select: { status: true } } },
+        });
+        if (orderItems.some(({ order }) => order.status === OrderStatus.PENDING || order.status === OrderStatus.CONFIRMED || order.status === OrderStatus.PROCESSING)) {
+          return "active-order" as const;
+        }
+
+        const cartItems = await tx.cartItem.findMany({
+          where: { skuId: { in: skuIds } },
+          select: { cart: { select: { status: true, expiresAt: true } } },
+        });
+        const now = new Date();
+        if (cartItems.some(({ cart }) => cart.status === CartStatus.ACTIVE && (!cart.expiresAt || cart.expiresAt > now))) {
+          return "active-cart" as const;
+        }
+
+        // Keep historical order snapshots while detaching them from the SKU.
+        await tx.orderItem.updateMany({ where: { skuId: { in: skuIds } }, data: { skuId: null } });
+        await tx.cartItem.deleteMany({ where: { skuId: { in: skuIds } } });
+        await tx.productSku.deleteMany({ where: { id: { in: skuIds } } });
+      }
+      await tx.productImage.deleteMany({ where: { productId: id } });
+      await tx.productTranslation.deleteMany({ where: { productId: id } });
+      await tx.adminAuditLog.create({
+        data: {
+          actorUserId: admin.id,
+          action: "catalog.product.delete",
+          entityType: "Product",
+          entityId: id,
+          metadata: { slug: product.slug },
+        },
+      });
+      await tx.product.delete({ where: { id } });
+      return "deleted" as const;
+    });
+
+    if (result === "missing") return { error: messages.productNotFound };
+    if (result === "active-cart") return { error: messages.productDeleteBlockedByCart };
+    if (result === "active-order") return { error: messages.productDeleteBlockedByOrder };
+
+    revalidatePath("/admin");
+    revalidatePath("/admin/products");
+    revalidatePath("/admin/categories");
+    revalidatePath("/admin/inventory");
+    revalidatePath("/ar");
+    revalidatePath("/ar/products");
+    revalidatePath("/ar/products/[slug]", "page");
+    revalidatePath("/sitemap.xml");
+    return { success: messages.productDeleted };
   });
 }
 

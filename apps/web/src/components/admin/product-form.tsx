@@ -5,12 +5,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, Input, Select, Textarea } from "@/components/ui";
+import { ToastMessage } from "@/components/ui/toast";
 import { adminMessages as messages } from "@/lib/admin/messages";
 import type { AdminActionState } from "@/lib/admin/config";
 import { saveProduct } from "@/app/(admin)/admin/actions";
 import { SubmitButton } from "./submit-button";
 import { ProductImageUploader, type UploadedProductImage } from "./product-image-uploader";
 import { cloudinaryImageUrl } from "@/lib/seo/cloudinary-image.mjs";
+
+import { ProductVariantSection, type ColorOption, type VariantQuantityMap } from "./product-variant-section";
 
 function productImageLoader({ src, width }: { src: string; width: number }) {
   return cloudinaryImageUrl(src, width) ?? src;
@@ -33,6 +36,10 @@ export type ProductFormValues = {
   categoryId: string;
   imageUrls: string[];
   isActive: boolean;
+  hasVariants?: boolean;
+  initialColors?: ColorOption[];
+  initialSizes?: string[];
+  initialQuantities?: VariantQuantityMap;
 };
 
 export function ProductForm({
@@ -53,6 +60,7 @@ export function ProductForm({
     categoryId: values.categoryId,
     isActive: values.isActive,
   }));
+  const [hasVariants, setHasVariants] = useState(values.hasVariants ?? false);
   const [uploadedImages, setUploadedImages] = useState<UploadedProductImage[]>([]);
   const [uploading, setUploading] = useState(false);
   const fieldError = (key: string) => state.fieldErrors?.[key];
@@ -79,7 +87,9 @@ export function ProductForm({
           <Input name="nameAr" label={messages.ar.productName} required maxLength={160} value={formValues.nameAr} onChange={(event) => setFormValues((current) => ({ ...current, nameAr: event.target.value }))} error={fieldError("nameAr")} />
           <Input name="price" label={messages.ar.price} required type="number" min="0" max="9999999999.99" step="0.01" inputMode="decimal" value={formValues.price} onChange={(event) => setFormValues((current) => ({ ...current, price: event.target.value }))} error={fieldError("price")} />
           <Input name="compareAtPrice" label={messages.ar.compareAtPrice} type="number" min="0" max="9999999999.99" step="0.01" inputMode="decimal" value={formValues.compareAtPrice} onChange={(event) => setFormValues((current) => ({ ...current, compareAtPrice: event.target.value }))} error={fieldError("compareAtPrice")} />
-          <Input name="stockQuantity" label={messages.ar.stock} required type="number" min="0" max="999999999" step="1" inputMode="numeric" value={formValues.stockQuantity} onChange={(event) => setFormValues((current) => ({ ...current, stockQuantity: event.target.value }))} error={fieldError("stockQuantity")} />
+          {!hasVariants && (
+            <Input name="stockQuantity" label={messages.ar.stock} required type="number" min="0" max="999999999" step="1" inputMode="numeric" value={formValues.stockQuantity} onChange={(event) => setFormValues((current) => ({ ...current, stockQuantity: event.target.value }))} error={fieldError("stockQuantity")} />
+          )}
           <Select name="categoryId" label={messages.ar.category} value={formValues.categoryId} onChange={(event) => setFormValues((current) => ({ ...current, categoryId: event.target.value }))} error={fieldError("categoryId")}>
             <option value="">{messages.ar.noCategory}</option>
             {categories.map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}
@@ -100,13 +110,28 @@ export function ProductForm({
           </div>}
           {values.id && <p className="admin-form__wide">{messages.ar.imageManagerHint}</p>}
         </div>
+
+        <ProductVariantSection
+          hasVariants={values.hasVariants ?? false}
+          initialColors={values.initialColors ?? []}
+          initialSizes={values.initialSizes ?? []}
+          initialQuantities={values.initialQuantities ?? {}}
+          onChange={(vData) => {
+            setHasVariants(vData.hasVariants);
+            if (vData.hasVariants) {
+              const total = Object.values(vData.quantities).reduce((a, b) => a + b, 0);
+              setFormValues((curr) => ({ ...curr, stockQuantity: String(total) }));
+            }
+          }}
+        />
+
         <label className="admin-checkbox">
           <input type="checkbox" name="isActive" checked={formValues.isActive} onChange={(event) => setFormValues((current) => ({ ...current, isActive: event.target.checked }))} />
           <span>{messages.ar.activeStatus}</span>
         </label>
-        {state.error && <p className="admin-feedback admin-feedback--error" role="alert">{state.error}</p>}
-        {state.success && <p className="admin-feedback admin-feedback--success" role="status">{state.success}</p>}
-        {state.fieldErrors && <p className="admin-feedback admin-feedback--error" role="alert">{messages.ar.genericError}</p>}
+        <ToastMessage eventKey={state} message={state.error} tone="error" />
+        <ToastMessage eventKey={state} message={state.success} tone="success" />
+        <ToastMessage eventKey={state} message={state.fieldErrors ? messages.ar.genericError : undefined} tone="warning" />
         <div className="admin-page__actions"><SubmitButton disabled={uploading}>{messages.ar.save}</SubmitButton><Link className="ui-button ui-button--ghost" href="/admin/products">{messages.ar.cancel}</Link></div>
       </form>
     </Card>

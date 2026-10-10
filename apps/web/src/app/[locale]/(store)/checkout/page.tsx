@@ -6,7 +6,8 @@ import { CheckoutForm } from "@/components/storefront/checkout-form";
 import { CheckoutRecovery } from "@/components/storefront/checkout-recovery";
 import { isLocale } from "@/lib/i18n/config";
 import { Prisma } from "@/generated/prisma/client";
-import { displayVariantOptions, formatMoney } from "@/lib/storefront/format";
+import { formatMoney } from "@/lib/storefront/format";
+import { VariantOptionsDisplay } from "@/components/storefront/variant-options-display";
 import { getCartSnapshot, isCartLineAvailable } from "@/lib/storefront/cart";
 import { getCurrentUser } from "@/lib/auth/authorization";
 import { prisma } from "@/lib/db/prisma";
@@ -72,7 +73,7 @@ export default async function CheckoutPage({ params }: { params: Promise<{ local
               <ul className="store-checkout-list">
                 {items.map((item) => <li key={item.id}>
                   <span>{item.sku.product.translations[0]?.name} × {item.quantity}
-                    {displayVariantOptions(item.sku.variantOptions) && <small>{displayVariantOptions(item.sku.variantOptions)}</small>}
+                    <small className="block mt-1"><VariantOptionsDisplay options={item.sku.variantOptions} /></small>
                   </span>
                   <strong>{formatMoney(item.sku.price.mul(item.quantity), currency)}</strong>
                 </li>)}

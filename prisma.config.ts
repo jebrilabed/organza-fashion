@@ -15,6 +15,7 @@ export default defineConfig({
   },
   datasource: {
     // Empty keeps format/validate/generate usable before local PostgreSQL setup.
-    url: process.env.DATABASE_URL ?? "",
+    // Use DIRECT_URL for migrations (bypasses PgBouncer which blocks DDL statements)
+    url: process.env.DIRECT_URL ?? process.env.DATABASE_URL ?? "",
   },
 });
