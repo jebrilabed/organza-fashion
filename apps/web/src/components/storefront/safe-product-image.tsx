@@ -9,7 +9,7 @@ function imageLoader({ src, width }: { src: string; width: number }) {
   return cloudinaryImageUrl(src, width) ?? src;
 }
 
-export function SafeProductImage({ src, alt, sizes, priority = false }: { src: string; alt: string; sizes?: string; priority?: boolean }) {
+export function SafeProductImage({ src, alt, sizes, priority = false, className }: { src: string; alt: string; sizes?: string; priority?: boolean; className?: string }) {
   const [failed, setFailed] = useState(false);
   if (failed) return <span className="store-image-empty" role="img" aria-label={alt}>{messages.ar.imageUnavailable}</span>;
 
@@ -21,6 +21,24 @@ export function SafeProductImage({ src, alt, sizes, priority = false }: { src: s
     isPublicHttpsImage = false;
   }
   if (!isPublicHttpsImage) return <span className="store-image-empty" role="img" aria-label={alt}>{messages.ar.imageUnavailable}</span>;
+
+  if (className) {
+    return (
+      <div className={className} style={{ position: "relative" }}>
+        <Image
+          src={src}
+          alt={alt}
+          fill
+          sizes={sizes}
+          loader={imageLoader}
+          priority={priority}
+          loading={priority ? "eager" : "lazy"}
+          onError={() => setFailed(true)}
+          style={{ objectFit: "contain" }}
+        />
+      </div>
+    );
+  }
 
   return <Image
     src={src}

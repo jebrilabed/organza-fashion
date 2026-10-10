@@ -1,6 +1,7 @@
 type ProductVariantItem = {
   colorName: string;
   colorHex: string;
+  colorImageUrl: string;
   sizeLabel: string;
   stockQuantity: number;
 };

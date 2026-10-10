@@ -69,7 +69,6 @@ export function ProductGallery({ images, altPrefix }: { images: ImageType[], alt
           sizes="(max-width: 960px) 100vw, 50vw"
           priority
           src={mainImage.url}
-          className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
         />
       </div>
 

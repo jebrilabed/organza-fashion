@@ -130,9 +130,12 @@ export function parseVariantData(formData, errors) {
       qty = Number(v.stockQuantity.trim());
     }
 
+    const colorImageUrl = typeof v.colorImageUrl === "string" && v.colorImageUrl.trim() ? v.colorImageUrl.trim() : "";
+
     validVariants.push({
       colorName,
       colorHex: hex,
+      colorImageUrl,
       sizeLabel,
       stockQuantity: qty,
     });
