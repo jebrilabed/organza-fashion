@@ -1,6 +1,6 @@
-# Shimo Gift
+# Organza Fashion
 
-Arabic-first Shimo Gift storefront. The `/ar` storefront,
+Arabic-first Organza Fashion storefront. The `/ar` storefront,
 published product catalog, guest/customer cart, checkout and order lifecycle now build
 on the PostgreSQL/Prisma foundation, server-side authentication, and protected admin
 catalog dashboard. Customer accounts and addresses, admin store settings, configurable
@@ -33,12 +33,18 @@ Copy-Item apps/web/.env.example apps/web/.env.local
 Copy-Item apps/ai/.env.example apps/ai/.env
 ```
 
-Set `DATABASE_URL` in `apps/web/.env.local` to a PostgreSQL database you control and set
-`AUTH_SECRET` (at least 32 characters) for Auth.js sessions. Do not commit populated
-environment files. Configure the store currency at `/admin/settings` before checkout.
-Set the same random value of at least 32 characters for `AI_INTERNAL_SERVICE_TOKEN` in
-both local environment files. Configure `GEMINI_API_KEY` and `GEMINI_MODEL` in
-`apps/ai/.env`; the web proxy keeps the provider credential server-side.
+Set `DATABASE_URL` and `DIRECT_URL` in `apps/web/.env.local` to a PostgreSQL database
+you control (e.g. Supabase) and set `AUTH_SECRET` (at least 32 characters) for Auth.js
+sessions. Do not commit populated environment files. Configure the store currency at
+`/admin/settings` before checkout. Set the same random value of at least 32 characters
+for `AI_INTERNAL_SERVICE_TOKEN` in both local environment files. Configure
+`GEMINI_API_KEY` and `GEMINI_MODEL` in `apps/ai/.env`; the web proxy keeps the provider
+credential server-side.
+
+> **Note:** `DIRECT_URL` must point to a direct PostgreSQL connection (port `5432`).
+> `DATABASE_URL` can use a pooled connection (e.g. PgBouncer on port `6543`).
+> Migrations always run through `DIRECT_URL` to avoid PgBouncer DDL limitations.
+
 See
 [environment configuration](docs/ENVIRONMENT.md), the [database guide](docs/DATABASE.md),
 [deployment and final validation guide](docs/DEPLOYMENT.md),
@@ -98,7 +104,7 @@ npm run typecheck:web
 npm run build:web
 ```
 
-Prisma workflow (requires `DATABASE_URL` for migration commands that connect to PostgreSQL):
+Prisma workflow (requires `DIRECT_URL` for migration commands that connect to PostgreSQL):
 
 ```powershell
 npm run db:validate
