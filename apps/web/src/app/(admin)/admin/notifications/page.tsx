@@ -3,11 +3,11 @@ import { NotificationStatus } from "@/generated/prisma/enums";
 import { Badge, Button, Container, Select } from "@/components/ui";
 import { ToastMessage } from "@/components/ui/toast";
 import { adminMessages as messages } from "@/lib/admin/messages";
+import { ADMIN_PAGE_SIZE } from "@/lib/admin/config";
 import { requireAdminPage } from "@/lib/auth/authorization";
 import { prisma } from "@/lib/db/prisma";
 import { retryNotificationAction } from "./actions";
 
-const pageSize = 20;
 const statusLabels: Record<NotificationStatus, string> = {
   [NotificationStatus.PENDING]: messages.ar.statusPending,
   [NotificationStatus.PROCESSING]: messages.ar.statusProcessing,
@@ -36,8 +36,8 @@ export default async function AdminNotificationsPage({ searchParams }: { searchP
     prisma.notificationOutbox.findMany({
       where,
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-      skip: (page - 1) * pageSize,
-      take: pageSize,
+      skip: (page - 1) * ADMIN_PAGE_SIZE,
+      take: ADMIN_PAGE_SIZE,
       select: {
         id: true,
         eventType: true,
@@ -53,7 +53,7 @@ export default async function AdminNotificationsPage({ searchParams }: { searchP
     }),
     prisma.notificationOutbox.count({ where }),
   ]);
-  const pages = Math.max(1, Math.ceil(total / pageSize));
+  const pages = Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE));
   const urlFor = (nextPage: number) => `/admin/notifications?${new URLSearchParams({ ...(status ? { status } : {}), page: String(nextPage) })}`;
   const notices: Record<string, string> = {
     retried: messages.ar.notificationRetryDone,

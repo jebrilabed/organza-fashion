@@ -54,7 +54,7 @@ function uploadedImageAssets(value) {
       if (url.protocol !== "https:" || url.hostname !== "res.cloudinary.com" || url.username || url.password || entry.url.length > 2048 || !/^farasha\/products\/[0-9a-f-]{36}$/i.test(publicId) || !url.pathname.includes(`/image/upload/`) || !url.pathname.includes(publicId)) {
         return { images: [], error: "invalidImageUrl" };
       }
-      const colorName = (entry.colorName && typeof entry.colorName === "string") ? entry.colorName.trim() : undefined;
+      const colorName = (entry.colorName && typeof entry.colorName === "string") ? entry.colorName.trim().slice(0, 50) : undefined;
       images.push({ url: url.href, publicId, ...(colorName ? { colorName } : {}) });
     } catch {
       return { images: [], error: "invalidImageUrl" };
@@ -134,7 +134,7 @@ export function parseVariantData(formData, errors) {
     const colorImageUrl = typeof v.colorImageUrl === "string" && v.colorImageUrl.trim() ? v.colorImageUrl.trim() : "";
 
     validVariants.push({
-      colorName,
+      colorName: colorObj?.name ?? colorName,
       colorHex: hex,
       colorImageUrl,
       sizeLabel,
@@ -167,6 +167,7 @@ export function parseProductInput(formData) {
   const seoTitleEn = text(formData.get("seoTitleEn"));
   const seoDescriptionEn = text(formData.get("seoDescriptionEn"));
   const categoryId = text(formData.get("categoryId")) || null;
+  const requestedPrimaryImagePublicId = text(formData.get("primaryImagePublicId"));
   const price = money(formData.get("price"), true, errors, "price");
   const compareAtPrice = money(formData.get("compareAtPrice"), false, errors, "compareAtPrice");
   const stockRaw = text(formData.get("stockQuantity"));
@@ -174,6 +175,12 @@ export function parseProductInput(formData) {
   const imageResult = optionalHttpsUrls(formData.get("imageUrls"));
   const imageAssetResult = uploadedImageAssets(formData.get("imageAssets"));
   const variantData = parseVariantData(formData, errors);
+  const colorNamesByKey = new Map(variantData.colors.map((color) => [color.name.trim().toLowerCase(), color.name]));
+  const uploadedImages = imageAssetResult.images.map((image) => {
+    if (!image.colorName) return image;
+    const colorName = colorNamesByKey.get(image.colorName.trim().slice(0, 50).toLowerCase());
+    return colorName ? { ...image, colorName } : { ...image, colorName: undefined };
+  });
 
   if (!nameAr) errors.nameAr = "required";
   else if (nameAr.length > 160) errors.nameAr = "tooLong";
@@ -189,6 +196,9 @@ export function parseProductInput(formData) {
   if (!variantData.hasVariants && stockQuantity === null) errors.stockQuantity = "invalidStock";
   if (imageResult.error) errors.imageUrls = imageResult.error;
   if (imageAssetResult.error) errors.imageUrls = imageAssetResult.error;
+  if (requestedPrimaryImagePublicId && !imageAssetResult.error && !imageAssetResult.images.some(({ publicId }) => publicId === requestedPrimaryImagePublicId)) {
+    errors.imageUrls = "invalidImageUrl";
+  }
   if (!imageResult.error && !imageAssetResult.error && imageResult.urls.length + imageAssetResult.images.length > 8) errors.imageUrls = "tooManyImages";
   if (compareAtPrice !== null && price !== null && Number(compareAtPrice) < Number(price)) {
     errors.compareAtPrice = "comparePriceBelowPrice";
@@ -213,7 +223,8 @@ export function parseProductInput(formData) {
       compareAtPrice,
       stockQuantity: variantData.hasVariants ? variantData.variants.reduce((sum, v) => sum + v.stockQuantity, 0) : (stockQuantity ?? 0),
       imageUrls: imageResult.urls,
-      uploadedImages: imageAssetResult.images,
+      uploadedImages,
+      primaryImagePublicId: requestedPrimaryImagePublicId || imageAssetResult.images[0]?.publicId || "",
       isActive: formData.get("isActive") === "on" || formData.get("isActive") === "true",
       hasVariants: variantData.hasVariants,
       variantColors: variantData.colors,

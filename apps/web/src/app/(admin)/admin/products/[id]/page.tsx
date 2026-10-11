@@ -26,7 +26,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
   const sku = product.skus.find((item) => item.isDefault) ?? product.skus[0];
 
   const hasVariants = product.kind === "VARIANT" || product.skus.some((s) => s.variantOptions && typeof s.variantOptions === "object" && Object.keys(s.variantOptions).length > 0);
-  const colorsMap = new Map<string, string>();
+  const colorsMap = new Map<string, { hex: string; imageUrl?: string }>();
   const sizesSet = new Set<string>();
   const initialQuantities: Record<string, number> = {};
 
@@ -38,7 +38,11 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
       const colorHex = opts["ColorHex"] ?? "#000000";
       const sizeLabel = opts["Size"] ?? "";
 
-      if (colorName) colorsMap.set(colorName, colorHex);
+      if (colorName) {
+        const currentColor = colorsMap.get(colorName);
+        const imageUrl = opts["ColorImageUrl"] ?? currentColor?.imageUrl;
+        colorsMap.set(colorName, { hex: colorHex, ...(imageUrl ? { imageUrl } : {}) });
+      }
       if (sizeLabel) sizesSet.add(sizeLabel);
 
       const key = `${colorName}|||${sizeLabel}`;
@@ -46,7 +50,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
     }
   }
 
-  const initialColors = Array.from(colorsMap.entries()).map(([name, hex]) => ({ name, hex }));
+  const initialColors = Array.from(colorsMap.entries()).map(([name, color]) => ({ name, ...color }));
   const initialSizes = Array.from(sizesSet);
 
   const imageColors: Record<string, string> = {};

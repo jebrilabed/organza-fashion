@@ -14,7 +14,7 @@ export function InventoryQuantityForm({ skuId, productId, quantity }: { skuId: s
   useEffect(() => {
     setQuantityValue(String(quantity));
   }, [quantity, state.success]);
-  return <form className="admin-inline-form" action={action}>
+  return <form className="admin-inline-form admin-inventory-quantity-form" action={action}>
     <input type="hidden" name="skuId" value={skuId} />
     <input type="hidden" name="productId" value={productId} />
     <Input name="quantity" label={messages.ar.quantity} type="number" min="0" max="999999999" step="1" value={quantityValue} onChange={(event) => setQuantityValue(event.target.value)} error={state.error} />

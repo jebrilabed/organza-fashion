@@ -8,7 +8,7 @@ import { getLowStockThreshold } from "@/lib/admin/inventory";
 import { requireAdminPage } from "@/lib/auth/authorization";
 import { prisma } from "@/lib/db/prisma";
 import { getStoreCurrency } from "@/lib/storefront/orders";
-import { displayVariantOptions, formatMoney } from "@/lib/storefront/format";
+import { formatMoney } from "@/lib/storefront/format";
 
 type InventoryPageProps = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 function one(value: string | string[] | undefined) { return Array.isArray(value) ? value[0] : value; }
@@ -69,11 +69,27 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
         <tbody>{skus.map((sku) => {
           const product = sku.product;
           const name = product.translations[0]?.name ?? product.slug;
+          const options = sku.variantOptions && typeof sku.variantOptions === "object" && !Array.isArray(sku.variantOptions)
+            ? sku.variantOptions as Record<string, unknown>
+            : {};
+          const rawColor = typeof options["Color"] === "string" ? options["Color"].trim() : "";
+          const rawColorHex = typeof options["ColorHex"] === "string" ? options["ColorHex"].trim() : "";
+          const isHexColor = /^#?[0-9a-f]{6}$/i.test(rawColor);
+          const colorHex = /^#[0-9a-f]{6}$/i.test(rawColorHex)
+            ? rawColorHex
+            : isHexColor ? (rawColor.startsWith("#") ? rawColor : `#${rawColor}`) : "";
+          const colorName = isHexColor ? "" : rawColor;
+          const sizeLabel = typeof options["Size"] === "string" || typeof options["Size"] === "number" ? String(options["Size"]) : "";
+          const colorImageUrl = typeof options["ColorImageUrl"] === "string" ? options["ColorImageUrl"] : "";
+          const imageUrl = colorImageUrl || product.images[0]?.url;
           const stockLabel = sku.stockQuantity === 0 ? messages.ar.outOfStock : sku.stockQuantity < threshold ? messages.ar.lowStock : messages.ar.inStock;
           const variant = sku.stockQuantity === 0 ? "error" : sku.stockQuantity < threshold ? "warning" : "success";
           return <tr key={sku.id}>
-            <td className="admin-product-image-cell" data-label={messages.ar.primaryImage}><span className="admin-product-thumb">{product.images[0]?.url ? <AdminProductThumbnail src={product.images[0].url} alt={product.images[0].altText ?? messages.ar.imageAlt} width={52} height={52} /> : messages.ar.noImage}</span></td>
-            <td data-label={messages.ar.productName}><span className="admin-product-name"><Link href={`/admin/products/${product.id}`}>{name}</Link>{displayVariantOptions(sku.variantOptions) && <small>{displayVariantOptions(sku.variantOptions)}</small>}</span></td>
+            <td className="admin-product-image-cell" data-label={messages.ar.primaryImage}><span className="admin-product-thumb">{imageUrl ? <AdminProductThumbnail src={imageUrl} alt={product.images[0]?.altText ?? messages.ar.imageAlt} width={52} height={52} /> : messages.ar.noImage}</span></td>
+            <td data-label={messages.ar.productName}><span className="admin-product-name"><Link href={`/admin/products/${product.id}`}>{name}</Link>{(colorHex || colorName || sizeLabel) && <small className="admin-inventory-variant">
+              {(colorHex || colorName) && <span className="admin-inventory-variant__color">{colorHex && <i aria-label={colorName ? `اللون ${colorName}` : "لون المنتج"} style={{ backgroundColor: colorHex }} />}{colorName && <span>{colorName}</span>}</span>}
+              {sizeLabel && <span className="admin-inventory-variant__size">المقاس: {sizeLabel}</span>}
+            </small>}</span></td>
             <td data-label={messages.ar.price}>{currency ? formatMoney(sku.price, currency) : "—"}</td><td data-label={messages.ar.stock}>{sku.stockQuantity}</td><td data-label={messages.ar.status}><Badge variant={variant}>{stockLabel}</Badge></td>
             <td data-label={messages.ar.updateStock}><InventoryQuantityForm skuId={sku.id} productId={product.id} quantity={sku.stockQuantity} /></td>
           </tr>;

@@ -29,11 +29,10 @@ export function AdminShell({ children, email }: { children: React.ReactNode; ema
       </aside>
       <main className="admin-main">
         <header className="admin-mobile-header">
-          <Link href="/admin" className="admin-brand admin-brand--compact">
+          <Link href="/admin" aria-label={messages.ar.admin} className="admin-brand admin-brand--compact">
             <span className="admin-brand__mark">
               <Image alt="" height={48} src="/brand/organza-fashion.png" width={48} />
             </span>
-            <strong>{messages.ar.brand}</strong>
           </Link>
           <div className="admin-mobile-header__tools">
             <span className="admin-mobile-identity" dir="ltr">{email ?? ""}</span>

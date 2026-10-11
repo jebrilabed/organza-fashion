@@ -23,6 +23,7 @@ type ProductInput = {
   stockQuantity: number;
   imageUrls: string[];
   uploadedImages: { url: string; publicId: string; colorName?: string }[];
+  primaryImagePublicId: string;
   isActive: boolean;
   hasVariants: boolean;
   variantColors: { name: string; hex: string }[];

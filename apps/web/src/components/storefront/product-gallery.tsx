@@ -10,8 +10,10 @@ type ImageType = {
   altText: string | null;
 };
 
-export function ProductGallery({ images, altPrefix }: { images: ImageType[], altPrefix: string }) {
-  const [mainImage, setMainImage] = useState<ImageType | null>(images.length > 0 ? images[0] : null);
+export function ProductGallery({ images, altPrefix, initialImageUrl }: { images: ImageType[], altPrefix: string; initialImageUrl?: string }) {
+  const [mainImage, setMainImage] = useState<ImageType | null>(() =>
+    images.find((image) => image.url === initialImageUrl) ?? images[0] ?? null
+  );
   const [thumbnailPage, setThumbnailPage] = useState(0);
   const pageCount = Math.ceil(images.length / 5);
   const visibleImages = images.slice(thumbnailPage * 5, thumbnailPage * 5 + 5);

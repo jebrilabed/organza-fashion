@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Card, Input, Select, Textarea } from "@/components/ui";
 import { ToastMessage } from "@/components/ui/toast";
 import { adminMessages as messages } from "@/lib/admin/messages";
+import { phase7Messages } from "@/lib/phase7/messages";
 import type { AdminActionState } from "@/lib/admin/config";
 import { saveProduct } from "@/app/(admin)/admin/actions";
 import { SubmitButton } from "./submit-button";
@@ -195,6 +196,7 @@ export function ProductForm({
   }));
   const [hasVariants, setHasVariants] = useState(values.hasVariants ?? false);
   const [uploadedImages, setUploadedImages] = useState<UploadedImageWithColor[]>([]);
+  const [primaryImagePublicId, setPrimaryImagePublicId] = useState("");
   const [uploading, setUploading] = useState(false);
   const [variantColors, setVariantColors] = useState<ColorOption[]>(values.initialColors ?? []);
   const fieldError = (key: string) => state.fieldErrors?.[key];
@@ -218,6 +220,19 @@ export function ProductForm({
     );
   };
 
+  const handleImageUploaded = (image: UploadedProductImage) => {
+    setUploadedImages((current) => [...current, image]);
+    setPrimaryImagePublicId((current) => current || image.providerPublicId);
+  };
+
+  const removeUploadedImage = (image: UploadedImageWithColor) => {
+    const remainingImages = uploadedImages.filter((item) => item.providerPublicId !== image.providerPublicId);
+    setUploadedImages(remainingImages);
+    setPrimaryImagePublicId((current) => current === image.providerPublicId
+      ? remainingImages[0]?.providerPublicId ?? ""
+      : current);
+  };
+
   return (
     <Card>
       <form action={action} className="admin-form">
@@ -232,17 +247,20 @@ export function ProductForm({
           <input type="hidden" name="seoDescriptionEn" value={values.seoDescriptionEn} />
         </>}
         {!values.id && (
-          <input
-            type="hidden"
-            name="imageAssets"
-            value={JSON.stringify(
-              uploadedImages.map(({ url, providerPublicId, colorName }) => ({
-                url,
-                publicId: providerPublicId,
-                ...(colorName ? { colorName } : {}),
-              }))
-            )}
-          />
+          <>
+            <input
+              type="hidden"
+              name="imageAssets"
+              value={JSON.stringify(
+                uploadedImages.map(({ url, providerPublicId, colorName }) => ({
+                  url,
+                  publicId: providerPublicId,
+                  ...(colorName ? { colorName } : {}),
+                }))
+              )}
+            />
+            <input type="hidden" name="primaryImagePublicId" value={primaryImagePublicId} />
+          </>
         )}
         <div className="admin-form__grid">
           <Input name="nameAr" label={messages.ar.productName} required maxLength={160} value={formValues.nameAr} onChange={(event) => setFormValues((current) => ({ ...current, nameAr: event.target.value }))} error={fieldError("nameAr")} />
@@ -259,14 +277,14 @@ export function ProductForm({
           {!values.id && <div className="admin-form__wide admin-product-image-field">
             <ProductImageUploader
               maxFiles={8 - uploadedImages.length}
-              onUploaded={(image) => setUploadedImages((current) => [...current, image])}
+              onUploaded={handleImageUploaded}
               onUploadingChange={setUploading}
             />
             {uploadedImages.length > 0 && (
               <div className="admin-product-image-previews">
                 {uploadedImages.map((image, index) => (
                   <div
-                    className="admin-product-image-preview"
+                    className={`admin-product-image-preview${primaryImagePublicId === image.providerPublicId ? " is-primary" : ""}`}
                     key={image.providerPublicId}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -279,6 +297,15 @@ export function ProductForm({
                         style={{ borderRadius: "8px", objectFit: "cover", flexShrink: 0 }}
                       />
                       <div style={{ flex: 1, minWidth: 0 }}>
+                        <label className="admin-product-image-primary">
+                          <input
+                            checked={primaryImagePublicId === image.providerPublicId}
+                            name="primaryImageChoice"
+                            onChange={() => setPrimaryImagePublicId(image.providerPublicId)}
+                            type="radio"
+                          />
+                          <span>{primaryImagePublicId === image.providerPublicId ? phase7Messages.ar.primaryImage : phase7Messages.ar.setPrimary}</span>
+                        </label>
                         <span
                           title={image.fileName}
                         >
@@ -286,7 +313,7 @@ export function ProductForm({
                         </span>
                         <button
                           aria-label={`ازالة ${image.fileName}`}
-                          onClick={() => setUploadedImages((current) => current.filter((_, itemIndex) => itemIndex !== index))}
+                          onClick={() => removeUploadedImage(image)}
                           type="button"
                         >
                           ازالة

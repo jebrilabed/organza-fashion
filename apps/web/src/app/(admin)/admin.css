@@ -185,17 +185,17 @@
 .admin-product-table col:nth-child(8) { width: 20%; }
 .admin-inventory-table { inline-size: 100%; min-inline-size: 60rem; table-layout: fixed; }
 .admin-inventory-table th:nth-child(1),
-.admin-inventory-table td:nth-child(1) { width: 10%; }
+.admin-inventory-table td:nth-child(1) { width: 9%; }
 .admin-inventory-table th:nth-child(2),
-.admin-inventory-table td:nth-child(2) { width: 24%; }
+.admin-inventory-table td:nth-child(2) { width: 28%; }
 .admin-inventory-table th:nth-child(3),
-.admin-inventory-table td:nth-child(3) { width: 16%; }
+.admin-inventory-table td:nth-child(3) { width: 13%; }
 .admin-inventory-table th:nth-child(4),
-.admin-inventory-table td:nth-child(4) { width: 10%; }
+.admin-inventory-table td:nth-child(4) { width: 9%; }
 .admin-inventory-table th:nth-child(5),
 .admin-inventory-table td:nth-child(5) { width: 16%; }
 .admin-inventory-table th:nth-child(6),
-.admin-inventory-table td:nth-child(6) { width: 24%; }
+.admin-inventory-table td:nth-child(6) { width: 25%; }
 .ui-table.admin-product-table th,
 .ui-table.admin-product-table td { text-align: center; vertical-align: middle; white-space: normal; overflow-wrap: anywhere; }
 .admin-product-table .admin-product-cell { min-inline-size: 0; justify-content: center; }
@@ -203,8 +203,13 @@
 .admin-product-table .admin-product-name { min-inline-size: 0; text-align: center; }
 .admin-product-table .admin-product-name a { overflow-wrap: anywhere; }
 .admin-product-table .admin-product-name small { overflow: hidden; text-overflow: ellipsis; }
-.admin-inventory-table .admin-product-name { min-inline-size: 0; }
-.admin-inventory-table .admin-product-name a { overflow-wrap: anywhere; }
+.admin-inventory-table td { min-inline-size: 0; white-space: normal; overflow-wrap: anywhere; }
+.admin-inventory-table .admin-product-name { display: grid; inline-size: 100%; max-inline-size: 100%; min-inline-size: 0; gap: 0.35rem; text-align: center; }
+.admin-inventory-table .admin-product-name a { display: block; max-inline-size: 100%; line-height: 1.55; overflow-wrap: anywhere; }
+.admin-inventory-table .admin-product-name small { display: flex; max-inline-size: 100%; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.4rem; overflow: visible; text-overflow: clip; }
+.admin-inventory-variant__color { display: inline-flex; min-inline-size: 0; align-items: center; gap: 0.35rem; }
+.admin-inventory-variant__color i { display: inline-block; inline-size: 0.9rem; block-size: 0.9rem; flex: none; border: 1px solid color-mix(in srgb, var(--text-primary) 20%, transparent); border-radius: 50%; }
+.admin-inventory-variant__size { border-radius: 999px; padding: 0.1rem 0.45rem; color: var(--text-muted); background: var(--surface-canvas); white-space: nowrap; }
 .admin-product-table .admin-row-actions { justify-content: center; }
 .admin-order-items-card { display: grid; gap: 1rem; }
 .admin-order-items-card h2 { margin: 0; font-size: 1.2rem; }
@@ -296,6 +301,11 @@
 .admin-order-header-actions form { display: inline-flex; }
 .admin-inline-form { display: flex; min-inline-size: 11rem; align-items: center; gap: 0.45rem; }
 .admin-inline-form input { inline-size: 5.5rem; }
+.admin-inventory-quantity-form { inline-size: 100%; min-inline-size: 0; flex-flow: row nowrap; align-items: end; gap: 0.5rem; }
+.admin-inventory-quantity-form .ui-field { min-inline-size: 0; flex: 0 1 6rem; gap: 0.3rem; }
+.admin-inventory-quantity-form .ui-field__label { white-space: nowrap; }
+.admin-inventory-quantity-form .ui-field__control { inline-size: 100%; min-inline-size: 0; min-block-size: 2.65rem; padding-inline: 0.55rem; }
+.admin-inventory-quantity-form .ui-button { flex: 0 0 auto; min-inline-size: 0; white-space: nowrap; padding-inline: 0.65rem; }
 .admin-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; }
 .admin-pagination p { margin: 0; color: var(--text-muted); }
 .admin-pagination__links { display: flex; gap: 0.5rem; }
@@ -330,8 +340,12 @@
 .admin-image-upload__hint { margin: 0; color: var(--text-muted); font-size: .82rem; }
 .admin-product-image-previews { display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: .75rem; }
 .admin-product-image-preview { display: flex; flex-direction: column; gap: .5rem; min-inline-size: 0; border: 1px solid color-mix(in srgb, var(--border-subtle) 24%, transparent); border-radius: .8rem; padding: .75rem; background: white; overflow: visible; }
+.admin-product-image-preview.is-primary { border-color: var(--brand-primary); box-shadow: 0 0 0 1px color-mix(in srgb, var(--brand-primary) 20%, transparent); }
 .admin-product-image-preview img { inline-size: 5rem; block-size: 5rem; border-radius: .55rem; object-fit: cover; background: var(--surface-canvas); flex-shrink: 0; }
 .admin-product-image-preview span { overflow: hidden; color: var(--text-muted); font-size: .78rem; text-overflow: ellipsis; white-space: nowrap; }
+.admin-product-image-primary { display: inline-flex; align-items: center; gap: .4rem; margin-block-end: .35rem; color: var(--text-primary); cursor: pointer; }
+.admin-product-image-primary input { inline-size: 1rem; block-size: 1rem; accent-color: var(--brand-primary); }
+.admin-product-image-primary span { color: var(--text-primary); font-weight: 700; }
 .admin-product-image-preview button { align-self: flex-start; border: 0; padding: .2rem 0; color: var(--status-error); background: transparent; font: inherit; font-size: .82rem; cursor: pointer; }
 .admin-image-editor { display: grid; gap: .75rem; border: 1px solid color-mix(in srgb, var(--border-subtle) 25%, transparent); border-radius: .85rem; padding: .8rem; }
 
@@ -361,6 +375,10 @@
 
 @media (max-width: 40rem) {
   .admin-form__grid { grid-template-columns: minmax(0, 1fr); }
+  .admin-form__grid,
+  .admin-form__grid > * { inline-size: 100%; min-inline-size: 0; max-inline-size: 100%; }
+  .admin-form__grid .ui-field { inline-size: 100%; }
+  .admin-variant-section { min-inline-size: 0; max-inline-size: 100%; }
   .admin-form__wide { grid-column: auto; }
   .admin-page__header { align-items: stretch; }
   .admin-page__actions { inline-size: 100%; }
@@ -462,7 +480,7 @@
   }
   .admin-mobile-header .admin-brand { min-inline-size: 0; }
   .admin-mobile-header .admin-brand__mark { inline-size: 2.55rem; block-size: 2.55rem; }
-  .admin-mobile-header .admin-brand strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .admin-mobile-header .admin-brand strong { display: none; }
   .admin-mobile-header__tools { flex: none; flex-wrap: nowrap; gap: .45rem; }
   .admin-mobile-identity { max-inline-size: min(32vw, 12rem); }
   .admin-store-link--mobile { inline-size: auto; }
@@ -584,4 +602,187 @@
 @media (prefers-reduced-motion: reduce) {
   .admin-mobile-drawer,
   .admin-mobile-drawer-backdrop { animation: none; }
+}
+
+/* Keep catalog and order tables readable as compact cards on phones and tablets. */
+@media (max-width: 72rem) {
+  .admin-category-table-wrap,
+  .admin-product-table-wrap,
+  .admin-inventory-table-wrap,
+  .admin-orders-table-wrap { max-inline-size: 100%; overflow: visible; border: 0; background: transparent; box-shadow: none; }
+
+  .admin-category-table,
+  .admin-product-table,
+  .admin-inventory-table,
+  .admin-orders-table { display: block; inline-size: 100%; min-inline-size: 0; table-layout: auto; }
+
+  .admin-category-table thead,
+  .admin-product-table thead,
+  .admin-inventory-table thead,
+  .admin-orders-table thead,
+  .admin-category-table colgroup,
+  .admin-product-table colgroup { display: none; }
+
+  .admin-category-table tbody,
+  .admin-product-table tbody,
+  .admin-inventory-table tbody,
+  .admin-orders-table tbody { display: grid; gap: .8rem; }
+
+  .admin-category-table tbody tr,
+  .admin-product-table tbody tr,
+  .admin-inventory-table tbody tr,
+  .admin-orders-table tbody tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); min-inline-size: 0; overflow: hidden; border: 1px solid color-mix(in srgb, var(--brand-primary) 13%, var(--border-subtle)); border-radius: .9rem; background: var(--surface-raised); box-shadow: 0 4px 14px rgba(74, 5, 23, .045); }
+
+  .ui-table.admin-category-table tbody td,
+  .ui-table.admin-product-table tbody td,
+  .ui-table.admin-inventory-table tbody td,
+  .ui-table.admin-orders-table tbody td { display: grid; min-inline-size: 0; align-content: start; gap: .4rem; border-block-end: 1px solid var(--border-subtle); padding: .75rem; text-align: start; white-space: normal; overflow-wrap: anywhere; }
+
+  .ui-table.admin-category-table tbody td::before,
+  .ui-table.admin-product-table tbody td::before,
+  .ui-table.admin-inventory-table tbody td::before,
+  .ui-table.admin-orders-table tbody td::before { content: attr(data-label); color: var(--text-muted); font-size: .72rem; font-weight: 800; line-height: 1.4; }
+
+  .admin-category-table tbody td:first-child,
+  .admin-category-table tbody td:nth-child(2),
+  .admin-category-table tbody td:last-child,
+  .admin-product-table tbody td:last-child,
+  .admin-inventory-table tbody td:last-child,
+  .admin-orders-table tbody td:first-child,
+  .admin-orders-table tbody td:nth-child(6),
+  .admin-orders-table tbody td:last-child { grid-column: 1 / -1; }
+
+  .admin-product-table tbody td:first-child,
+  .admin-inventory-table tbody td:first-child { grid-column: 1; }
+  .admin-product-table tbody td:nth-child(2),
+  .admin-inventory-table tbody td:nth-child(2) { grid-column: 2; }
+
+  .admin-product-table .admin-product-cell,
+  .admin-product-table .admin-product-name { min-inline-size: 0; }
+  .admin-product-table .admin-product-name a,
+  .admin-category-table td a,
+  .admin-orders-table a { overflow-wrap: anywhere; }
+  .admin-product-table .admin-row-actions,
+  .admin-category-table .admin-row-actions { justify-content: flex-start; }
+  .admin-product-table .admin-row-actions .ui-button,
+  .admin-category-table .admin-row-actions .ui-button { min-inline-size: 0; }
+  .admin-inventory-table .admin-product-name { justify-items: start; text-align: start; }
+  .admin-inventory-table .admin-product-name small { justify-content: flex-start; }
+  .admin-inventory-table tbody td:last-child { align-content: start; }
+  .admin-orders-table tbody td:last-child { border-block-end: 0; }
+  .admin-orders-table__statuses { display: flex; flex-wrap: wrap; gap: .75rem; }
+  .admin-orders-table__statuses > span { min-inline-size: 0; }
+  .admin-orders-table__dates { display: grid; min-inline-size: 0; gap: .2rem; }
+}
+
+@media (max-width: 40rem) {
+  .admin-category-table tbody tr,
+  .admin-product-table tbody tr,
+  .admin-inventory-table tbody tr,
+  .admin-orders-table tbody tr { grid-template-columns: minmax(0, 1fr); }
+
+  .admin-category-table tbody td,
+  .admin-product-table tbody td,
+  .admin-inventory-table tbody td,
+  .admin-orders-table tbody td { grid-column: 1 / -1; }
+}
+
+@media (max-width: 24rem) {
+  .admin-category-table tbody tr,
+  .admin-product-table tbody tr,
+  .admin-inventory-table tbody tr,
+  .admin-orders-table tbody tr { grid-template-columns: minmax(0, 1fr); }
+
+  .admin-category-table tbody td,
+  .admin-product-table tbody td,
+  .admin-inventory-table tbody td,
+  .admin-orders-table tbody td { grid-column: 1 / -1; padding: .65rem; }
+  .admin-product-table .admin-row-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-product-table .admin-row-actions > * { min-inline-size: 0; }
+}
+
+@media (max-width: 72rem) {
+  .ui-table-wrap.admin-category-table-wrap,
+  .ui-table-wrap.admin-product-table-wrap,
+  .ui-table-wrap.admin-inventory-table-wrap,
+  .ui-table-wrap.admin-orders-table-wrap {
+    max-inline-size: 100%;
+    overflow: auto;
+    border: 1px solid var(--border-subtle);
+    border-radius: .75rem;
+    background: var(--surface-raised);
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-inline: contain;
+  }
+
+  .ui-table.admin-category-table,
+  .ui-table.admin-product-table,
+  .ui-table.admin-inventory-table,
+  .ui-table.admin-orders-table {
+    display: table;
+    inline-size: max-content;
+    table-layout: auto;
+  }
+
+  .ui-table.admin-category-table { min-inline-size: 52rem; }
+  .ui-table.admin-product-table { min-inline-size: 68rem; }
+  .ui-table.admin-inventory-table { min-inline-size: 58rem; }
+  .ui-table.admin-orders-table { min-inline-size: 70rem; }
+
+  .ui-table.admin-category-table thead,
+  .ui-table.admin-product-table thead,
+  .ui-table.admin-inventory-table thead,
+  .ui-table.admin-orders-table thead { display: table-header-group; }
+
+  .ui-table.admin-category-table tbody,
+  .ui-table.admin-product-table tbody,
+  .ui-table.admin-inventory-table tbody,
+  .ui-table.admin-orders-table tbody { display: table-row-group; }
+
+  .ui-table.admin-category-table tbody tr,
+  .ui-table.admin-product-table tbody tr,
+  .ui-table.admin-inventory-table tbody tr,
+  .ui-table.admin-orders-table tbody tr {
+    display: table-row;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .ui-table.admin-category-table tbody td,
+  .ui-table.admin-product-table tbody td,
+  .ui-table.admin-inventory-table tbody td,
+  .ui-table.admin-orders-table tbody td {
+    display: table-cell;
+    min-inline-size: 0;
+    grid-column: auto;
+    border-block-end: 1px solid var(--border-subtle);
+    padding: .75rem .9rem;
+    text-align: center;
+    vertical-align: middle;
+    overflow-wrap: anywhere;
+  }
+
+  .ui-table.admin-category-table th,
+  .ui-table.admin-product-table th,
+  .ui-table.admin-inventory-table th,
+  .ui-table.admin-orders-table th { text-align: center; vertical-align: middle; }
+
+  .ui-table.admin-category-table tbody td::before,
+  .ui-table.admin-product-table tbody td::before,
+  .ui-table.admin-inventory-table tbody td::before,
+  .ui-table.admin-orders-table tbody td::before { display: none; content: none; }
+
+  .admin-category-table .admin-row-actions,
+  .admin-product-table .admin-row-actions { flex-wrap: nowrap; justify-content: center; }
+  .admin-inventory-table .admin-product-name { justify-items: center; text-align: center; }
+  .admin-inventory-table .admin-product-name small { justify-content: center; }
+  .admin-inventory-quantity-form { justify-content: center; }
+  .admin-orders-table__order,
+  .admin-orders-table__customer,
+  .admin-orders-table__dates { justify-items: center; text-align: center; }
+  .admin-orders-table__statuses { justify-items: center; }
+  .admin-orders-table__statuses > span { align-items: center; }
 }

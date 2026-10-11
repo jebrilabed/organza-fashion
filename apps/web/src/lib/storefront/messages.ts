@@ -43,6 +43,7 @@ export const storefrontMessages = {
     checkout: "إتمام الطلب",
     product: "المنتج",
     price: "السعر",
+    priceBeforeDiscount: "السعر قبل الخصم",
     lineTotal: "الإجمالي",
     remove: "إزالة",
     updateQuantity: "تحديث الكمية",

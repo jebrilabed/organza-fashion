@@ -13,6 +13,7 @@ async function storefrontSignOut() {
 export async function StorefrontHeader() {
   let count = 0;
   let isSignedIn = false;
+  let isAdmin = false;
   const storeName = messages.ar.brand;
   let accountHref = "/ar/login";
   let accountLabel: string = messages.ar.login;
@@ -23,6 +24,7 @@ export async function StorefrontHeader() {
       accountHref = "/ar/account";
       accountLabel = messages.ar.account;
       if (session.user.role === "ADMIN") {
+        isAdmin = true;
         accountHref = "/admin";
         accountLabel = "لوحة التحكم";
       }
@@ -55,12 +57,12 @@ export async function StorefrontHeader() {
           </form>
         </nav>
         <div className="store-header__actions">
-          <Link aria-label={accountLabel} className="store-icon-link store-header__account" href={accountHref}>
+          <Link aria-label={accountLabel} className={`store-icon-link store-header__account${isAdmin ? " store-header__account--admin" : ""}`} href={accountHref}>
             <AccountIcon />
             <span>{accountLabel}</span>
           </Link>
           {isSignedIn && <form action={storefrontSignOut} className="store-header__sign-out-form">
-            <button className="store-icon-link store-header__sign-out" type="submit">{phase7Messages.ar.signOut}</button>
+            <button aria-label={phase7Messages.ar.signOut} className="store-icon-link store-header__sign-out" type="submit"><SignOutIcon /><span>{phase7Messages.ar.signOut}</span></button>
           </form>}
           <Link aria-label={messages.ar.cartCount.replace("{count}", String(count))} className="store-icon-link store-header__cart" href="/ar/cart">
             <CartIcon />
@@ -80,7 +82,7 @@ export async function StorefrontHeader() {
                 <input aria-label={messages.ar.search} maxLength={100} name="q" placeholder="ابحثي في التشكيلة" type="search" />
                 <button type="submit">بحث</button>
               </form>
-              <Link href={accountHref}>{accountLabel}</Link>
+              <Link className={isAdmin ? "store-header__mobile-account store-header__account--admin" : "store-header__mobile-account"} href={accountHref}>{accountLabel}</Link>
               {isSignedIn && <form action={storefrontSignOut} className="store-header__mobile-sign-out">
                 <button type="submit">{phase7Messages.ar.signOut}</button>
               </form>}
@@ -95,6 +97,10 @@ export async function StorefrontHeader() {
 
 function AccountIcon() {
   return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.4" /><path d="M4.5 20c.7-3.5 3.2-5.3 7.5-5.3s6.8 1.8 7.5 5.3" /></svg>;
+}
+
+function SignOutIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M10 4H5.5A1.5 1.5 0 0 0 4 5.5v13A1.5 1.5 0 0 0 5.5 20H10M14 16l4-4-4-4M18 12H9" /></svg>;
 }
 
 function CartIcon() {

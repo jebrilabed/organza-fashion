@@ -1,6 +1,5 @@
 import { notFound, permanentRedirect } from "next/navigation";
 import { Badge, Container } from "@/components/ui";
-import { Prisma } from "@/generated/prisma/client";
 import { ProductVariantSelector } from "@/components/storefront/product-variant-selector";
 import { addToCartAction } from "../../actions";
 import { isLocale } from "@/lib/i18n/config";
@@ -10,7 +9,6 @@ import { prisma } from "@/lib/db/prisma";
 import { formatMoney } from "@/lib/storefront/format";
 import { storefrontMessages as messages } from "@/lib/storefront/messages";
 import type { Metadata } from "next";
-import { SafeProductImage } from "@/components/storefront/safe-product-image";
 import { ProductGallery } from "@/components/storefront/product-gallery";
 import { siteConfig } from "@/lib/config/site";
 import { getPublicCategoryTrail, getPublicSiteData, ogImageFromImages } from "@/lib/seo/site-data";
@@ -67,8 +65,10 @@ export default async function ProductDetails({ params }: { params: Promise<{ loc
   const purchasable = product.skus.filter((sku) => sku.stockQuantity > 0);
   const totalStock = product.skus.reduce((total, sku) => total + sku.stockQuantity, 0);
   const selectableSkus = product.skus.length ? product.skus : [];
-  const minimumPrice = selectableSkus.reduce<Prisma.Decimal | null>((minimum, sku) =>
-    !minimum || sku.price.lessThan(minimum) ? sku.price : minimum, null);
+  const minimumPriceSku = selectableSkus.reduce<(typeof selectableSkus)[number] | null>((minimum, sku) =>
+    !minimum || sku.price.lessThan(minimum.price) ? sku : minimum, null);
+  const minimumPrice = minimumPriceSku?.price ?? null;
+  const minimumCompareAtPrice = minimumPriceSku?.compareAtPrice?.greaterThan(minimumPriceSku.price) ? minimumPriceSku.compareAtPrice : null;
   const breadcrumbs = [
     { name: store.name, path: "/ar" },
     { name: messages.ar.products, path: "/ar/products" },
@@ -93,12 +93,13 @@ export default async function ProductDetails({ params }: { params: Promise<{ loc
           <ProductGallery 
             images={product.images.map(img => ({ url: img.url, altText: img.altText }))} 
             altPrefix={translation.name} 
+            initialImageUrl={firstImage?.url}
           />
           <div className="store-product-detail__content">
             <header className="store-page-heading">
               {categoryTrail.at(-1)?.name && <p className="store-muted">{categoryTrail.at(-1)?.name}</p>}
               <h1>{translation.name}</h1>
-              {minimumPrice && currency ? <p className="store-price">{messages.ar.startingAt} {formatMoney(minimumPrice, currency)}</p> : <p className="store-muted">{messages.ar.currencyUnavailable}</p>}
+              {minimumPrice && currency ? <div className="store-product-detail__price"><p className="store-price">{messages.ar.startingAt} {formatMoney(minimumPrice, currency)}</p>{minimumCompareAtPrice && <del aria-label={messages.ar.priceBeforeDiscount}>{formatMoney(minimumCompareAtPrice, currency)}</del>}</div> : <p className="store-muted">{messages.ar.currencyUnavailable}</p>}
               <Badge variant={totalStock > 0 ? "success" : "error"}>{totalStock > 0 ? messages.ar.inStock : messages.ar.outOfStock}</Badge>
               {totalStock > 0 && totalStock <= 5 && <p className="store-muted">كمية محدودة</p>}
             </header>
@@ -110,6 +111,8 @@ export default async function ProductDetails({ params }: { params: Promise<{ loc
                   return {
                     id: sku.id,
                     price: sku.price.toString(),
+                    priceLabel: formatMoney(sku.price, currency),
+                    previousPriceLabel: sku.compareAtPrice?.greaterThan(sku.price) ? formatMoney(sku.compareAtPrice, currency) : null,
                     stockQuantity: sku.stockQuantity,
                     colorName: opts["Color"],
                     colorHex: opts["ColorHex"],

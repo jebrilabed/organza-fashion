@@ -118,7 +118,13 @@
 }
 
 .store-header__sign-out-form { margin: 0; }
-.store-header__sign-out { border-color: var(--border-subtle); background: #fff; cursor: pointer; font-family: inherit; }
+.store-header__account--admin { flex: none; border-color: color-mix(in srgb, var(--brand-primary) 24%, var(--border-subtle)); color: var(--brand-primary); background: color-mix(in srgb, var(--brand-secondary) 68%, #fff); font-weight: 750; white-space: nowrap; }
+.store-header__account--admin:hover { border-color: var(--brand-primary); color: #fff; background: var(--brand-primary); }
+.store-header__sign-out { display: inline-flex; flex: none; border-color: var(--border-subtle); background: #fff; cursor: pointer; font-family: inherit; font-size: 0.88rem; font-weight: 600; line-height: 1; white-space: nowrap; }
+.store-header__sign-out svg { inline-size: 1.1rem; block-size: 1.1rem; flex: none; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+.store-header__sign-out:hover { border-color: color-mix(in srgb, var(--status-error) 38%, var(--border-subtle)); color: var(--status-error); background: color-mix(in srgb, var(--status-error) 5%, #fff); }
+.store-header__account--admin:focus-visible,
+.store-header__sign-out:focus-visible { outline: 3px solid color-mix(in srgb, var(--brand-primary) 35%, transparent); outline-offset: 2px; }
 .store-header__mobile-sign-out { margin: 0; }
 .store-mobile-menu__panel form.store-header__mobile-sign-out { display: block; min-block-size: 0; border: 0; border-radius: 0; }
 .store-mobile-menu__panel form.store-header__mobile-sign-out button {
@@ -667,6 +673,15 @@
   font-size: 1.05rem;
   font-weight: 800;
 }
+.store-price-group,
+.store-product-detail__price,
+.store-variant-price { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem .6rem; }
+.store-price-group del,
+.store-product-detail__price del,
+.store-variant-price del { color: var(--text-muted); font-size: .88em; text-decoration: line-through; text-decoration-thickness: 1px; }
+.store-product-detail__price .store-price { margin: .25rem 0; }
+.store-variant-price { margin: 0; color: var(--text-muted); }
+.store-variant-price strong { color: var(--brand-primary); font-size: 1.2rem; }
 
 .store-product-card__action {
   display: inline-flex;
@@ -1325,7 +1340,7 @@
   .store-header__announcement { padding-inline: .5rem; font-size: .62rem; }
   .store-header__inner { min-block-size: 4rem; }
   .store-brand__mark { inline-size: 2.7rem; block-size: 2.7rem; }
-  .store-brand__name { max-inline-size: 6.8rem; font-size: .95rem; }
+  .store-brand__name { display: none; }
   .store-header__account { display: none; }
   .store-header__cart,
   .store-mobile-menu summary { min-inline-size: 2.55rem; min-block-size: 2.55rem; justify-content: center; padding-inline: .55rem; }

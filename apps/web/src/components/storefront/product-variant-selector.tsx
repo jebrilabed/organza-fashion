@@ -8,6 +8,8 @@ import { StorefrontSubmitButton } from "./submit-button";
 export type VariantSkuData = {
   id: string;
   price: string;
+  priceLabel: string;
+  previousPriceLabel: string | null;
   stockQuantity: number;
   colorName?: string;
   colorHex?: string;
@@ -149,6 +151,14 @@ export function ProductVariantSelector({
   return (
     <form action={addToCartAction} onSubmit={handleSubmit} className="store-form space-y-5 my-4">
       <input type="hidden" name="skuId" value={matchedSku ? matchedSku.id : ""} />
+
+      {isSelectionComplete && matchedSku && (
+        <p className="store-variant-price">
+          <span>{messages.ar.price}</span>
+          <strong>{matchedSku.priceLabel}</strong>
+          {matchedSku.previousPriceLabel && <del aria-label={messages.ar.priceBeforeDiscount}>{matchedSku.previousPriceLabel}</del>}
+        </p>
+      )}
 
       {/* Color Swatches */}
       {hasColors && (

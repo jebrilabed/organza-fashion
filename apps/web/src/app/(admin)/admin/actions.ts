@@ -41,7 +41,7 @@ async function runAdminAction(
     return result.value;
   } catch (error) {
     const code = error && typeof error === "object" && "code" in error ? String(error.code) : "unknown";
-    console.error("Admin catalog operation failed.", { code });
+    console.error("Admin catalog operation failed:", error);
     if (code === "P2002") return { error: messages.uniqueConflict };
     if (code === "P2003") return { error: messages.genericError };
     return { error: messages.databaseUnavailable };
@@ -186,21 +186,29 @@ export async function saveProduct(_previous: AdminActionState, formData: FormDat
     const savedId = await prisma.$transaction(async (tx) => {
       let id: string;
       if (!existing) {
+        const productImages = [
+          ...input.imageUrls.map((url) => ({ url, providerPublicId: null, altText: input.nameAr })),
+          ...input.uploadedImages.map(({ url, publicId }) => ({ url, providerPublicId: publicId, altText: input.nameAr })),
+        ];
+        const primaryImageIndex = productImages.findIndex((image) => image.providerPublicId === input.primaryImagePublicId);
+        if (primaryImageIndex > 0) productImages.unshift(productImages.splice(primaryImageIndex, 1)[0]);
+
         const created = await tx.product.create({
           data: {
             ...productData,
             translations: { create: translations },
-            images: { create: [
-              ...input.imageUrls.map((url) => ({ url, providerPublicId: null, altText: input.nameAr })),
-              ...input.uploadedImages.map(({ url, publicId }) => ({ url, providerPublicId: publicId, altText: input.nameAr })),
-            ].map((image, sortOrder) => ({ ...image, sortOrder })) },
+            images: { create: productImages.map((image, sortOrder) => ({ ...image, sortOrder })) },
           },
           select: { id: true },
         });
         id = created.id;
 
         if (input.hasVariants) {
-          const createdSkuIds: { id: string; colorName: string }[] = [];
+          const imageColorMap = new Map<string, string>();
+          for (const image of input.uploadedImages) {
+            if (image.colorName) imageColorMap.set(image.colorName.trim().toLowerCase(), image.url);
+          }
+
           for (let i = 0; i < input.variants.length; i++) {
             const v = input.variants[i];
             const variantSkuCode = await generateProductSkuCode();
@@ -208,12 +216,13 @@ export async function saveProduct(_previous: AdminActionState, formData: FormDat
             if (v.colorName) {
               variantOptions["Color"] = v.colorName;
               if (v.colorHex) variantOptions["ColorHex"] = v.colorHex;
-              if (v.colorImageUrl) variantOptions["ColorImageUrl"] = v.colorImageUrl;
+              const linkedImageUrl = imageColorMap.get(v.colorName.trim().toLowerCase()) ?? v.colorImageUrl;
+              if (linkedImageUrl) variantOptions["ColorImageUrl"] = linkedImageUrl;
             }
             if (v.sizeLabel) {
               variantOptions["Size"] = v.sizeLabel;
             }
-            const createdSku = await tx.productSku.create({
+            await tx.productSku.create({
               data: {
                 productId: id,
                 skuCode: variantSkuCode,
@@ -224,27 +233,7 @@ export async function saveProduct(_previous: AdminActionState, formData: FormDat
                 isActive: input.isActive,
                 variantOptions,
               },
-              select: { id: true },
             });
-            if (v.colorName) createdSkuIds.push({ id: createdSku.id, colorName: v.colorName });
-          }
-          // Assign ColorImageUrl from uploaded images that have a colorName
-          const imageColorMap = new Map<string, string>();
-          for (const img of input.uploadedImages) {
-            if (img.colorName) imageColorMap.set(img.colorName, img.url);
-          }
-          if (imageColorMap.size > 0) {
-            const seenColors = new Set<string>();
-            for (const { id: skuId, colorName } of createdSkuIds) {
-              if (!seenColors.has(colorName) && imageColorMap.has(colorName)) {
-                seenColors.add(colorName);
-                const sku = await tx.productSku.findUnique({ where: { id: skuId }, select: { variantOptions: true } });
-                if (sku?.variantOptions && typeof sku.variantOptions === "object") {
-                  const opts = { ...(sku.variantOptions as Record<string, string>), ColorImageUrl: imageColorMap.get(colorName)! };
-                  await tx.productSku.update({ where: { id: skuId }, data: { variantOptions: opts } });
-                }
-              }
-            }
           }
 
         } else {

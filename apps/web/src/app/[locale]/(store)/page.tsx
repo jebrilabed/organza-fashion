@@ -78,7 +78,7 @@ export default async function StorefrontHome({ params, searchParams, categoryTra
         translations: { where: { locale: Locale.AR }, take: 1, select: { name: true, slug: true } },
         images: { orderBy: { sortOrder: "asc" }, take: 1, select: { url: true, altText: true } },
         category: { select: { translations: { where: { locale: Locale.AR }, take: 1, select: { name: true } } } },
-        skus: { where: { isActive: true }, select: { id: true, price: true, stockQuantity: true, variantOptions: true } },
+        skus: { where: { isActive: true }, select: { id: true, price: true, compareAtPrice: true, stockQuantity: true, variantOptions: true } },
       },
     }),
     prisma.product.count({ where }),
