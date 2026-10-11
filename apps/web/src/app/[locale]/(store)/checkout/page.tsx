@@ -81,9 +81,8 @@ export default async function CheckoutPage({ params }: { params: Promise<{ local
                 </li>)}
               </ul>
               <p className="store-summary__row"><span>{messages.ar.subtotal}</span><strong>{formatMoney(subtotal, currency)}</strong></p>
-              <p className="store-summary__row"><span>{messages.ar.shippingCost}</span><strong>{formatMoney(shippingCost, currency)}</strong></p>
+              <p className="store-summary__row"><span>{messages.ar.shippingCost}</span><strong>{messages.ar.shippingFree}</strong></p>
               <p className="store-summary__row"><span>{messages.ar.total}</span><strong>{formatMoney(total, currency)}</strong></p>
-              <p className="store-muted">{messages.ar.shippingUnconfigured}</p>
             </Card>
             <Card>
               <CheckoutForm

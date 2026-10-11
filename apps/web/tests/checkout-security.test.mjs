@@ -64,7 +64,7 @@ test("checkout quote detects changed prices, quantities, and SKU lines", () => {
   assert.equal(checkoutQuoteMatches(verified.quote.items, [{ ...quoteItems[0], quantity: 1 }, quoteItems[1]]), false);
 });
 
-test("checkout totals use decimal-safe current prices and shipping", () => {
+test("checkout totals are decimal-safe and shipping is always free", () => {
   assert.deepEqual(calculateCheckoutAmounts([
     { unitPrice: "0.10", quantity: 3 },
     { unitPrice: "0.20", quantity: 2 },
@@ -74,8 +74,7 @@ test("checkout totals use decimal-safe current prices and shipping", () => {
     shipping: "0.00",
     total: "0.70",
   });
-  assert.equal(calculateCheckoutAmounts([{ unitPrice: "99.99", quantity: 3 }], "5.00").total, "304.97");
-  assert.equal(calculateCheckoutAmounts([{ unitPrice: "1.00", quantity: 1 }], "-1.00"), null);
+  assert.equal(calculateCheckoutAmounts([{ unitPrice: "99.99", quantity: 3 }], "5.00").total, "299.97");
 });
 
 test("checkout form parsing ignores client prices, totals, stock, and owner identifiers", () => {

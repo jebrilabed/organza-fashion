@@ -8,7 +8,7 @@ import { ToastMessage } from "@/components/ui/toast";
 import { OrderStatus, PaymentStatus } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db/prisma";
 import { adminMessages } from "@/lib/admin/messages";
-import { allowedOrderTransitions } from "@/lib/storefront/order-workflow.mjs";
+import { availableAdminOrderStatuses } from "@/lib/storefront/order-workflow.mjs";
 import { addressParts, formatMoney } from "@/lib/storefront/format";
 import { orderStatusLabel, paymentMethodLabel, paymentStatusLabel } from "@/lib/storefront/order-labels";
 import { storefrontMessages as messages } from "@/lib/storefront/messages";
@@ -44,14 +44,14 @@ export default async function AdminOrderDetails({ params, searchParams }: {
   });
   if (!order) notFound();
   const address = addressParts(order.shippingAddress);
-  const availableTransitions = allowedOrderTransitions(order.status);
+  const availableStatuses = availableAdminOrderStatuses(order.status);
   const adminText = adminMessages.ar;
 
   return (
     <Container className="admin-content">
       <header className="admin-page-header"><div><p className="admin-eyebrow">{messages.ar.adminOrders}</p><h1 dir="ltr">{order.orderNumber}</h1><p><Badge>{orderStatusLabel(order.status)}</Badge></p></div><div className="admin-order-header-actions"><DeleteOrderForm orderId={order.id} label={adminText.deleteOrder} confirmMessage={adminText.deleteOrderConfirm} /><Link href="/admin/orders">{messages.ar.backToAdminOrders}</Link></div></header>
       <ToastMessage message={notice === "updated" ? messages.ar.statusUpdated : notice === "paymentUpdated" ? messages.ar.paymentStatusUpdated : undefined} tone="success" />
-      <ToastMessage message={notice === "transition" ? messages.ar.invalidTransition : notice === "missingSku" ? messages.ar.missingSkuRestore : notice === "alreadyCancelled" ? messages.ar.alreadyCancelled : notice === "restockUnavailable" ? messages.ar.restockUnavailable : notice === "paymentInvalid" ? messages.ar.paymentStatusInvalid : notice === "paymentUpdateFailed" ? messages.ar.paymentStatusUpdateFailed : notice === "deleteMissingSku" ? adminText.orderDeleteMissingSku : notice === "deleteRestockUnavailable" ? adminText.orderDeleteRestockUnavailable : notice === "deleteNotificationProcessing" ? adminText.orderDeleteNotificationProcessing : notice === "deleteFailed" ? adminText.orderDeleteFailed : notice === "notFound" ? messages.ar.orderNotFound : notice && notice !== "updated" && notice !== "paymentUpdated" ? messages.ar.databaseUnavailable : undefined} tone="error" />
+      <ToastMessage message={notice === "transition" ? messages.ar.invalidTransition : notice === "missingSku" ? messages.ar.missingSkuRestore : notice === "alreadyCancelled" ? messages.ar.alreadyCancelled : notice === "restockUnavailable" ? messages.ar.restockUnavailable : notice === "reserveUnavailable" ? messages.ar.reserveUnavailable : notice === "paymentInvalid" ? messages.ar.paymentStatusInvalid : notice === "paymentUpdateFailed" ? messages.ar.paymentStatusUpdateFailed : notice === "deleteMissingSku" ? adminText.orderDeleteMissingSku : notice === "deleteRestockUnavailable" ? adminText.orderDeleteRestockUnavailable : notice === "deleteNotificationProcessing" ? adminText.orderDeleteNotificationProcessing : notice === "deleteFailed" ? adminText.orderDeleteFailed : notice === "notFound" ? messages.ar.orderNotFound : notice && notice !== "updated" && notice !== "paymentUpdated" ? messages.ar.databaseUnavailable : undefined} tone="error" />
       <div className="store-admin-order-info">
         <Card><h2>{messages.ar.customer}</h2><p>{order.contactName}</p><p dir="ltr">{order.contactPhone}</p>{order.contactEmail && <p dir="ltr">{order.contactEmail}</p>}</Card>
         <Card><h2>{messages.ar.addressInfo}</h2><p>{address.address}</p><p>{address.city}</p></Card>
@@ -86,12 +86,12 @@ export default async function AdminOrderDetails({ params, searchParams }: {
           <StorefrontSubmitButton pendingText={messages.ar.saving}>{messages.ar.updatePaymentStatus}</StorefrontSubmitButton>
         </form>
       </Card>
-      {availableTransitions.length > 0 ? (
+      {availableStatuses.length > 0 ? (
         <Card>
           <h2>{messages.ar.updateStatus}</h2>
           <form action={updateOrderStatusAction} className="admin-order-status-form">
             <input name="orderId" type="hidden" value={order.id} />
-            <Select label={messages.ar.status} name="status" required><option disabled value="">{messages.ar.nextStatus}</option>{availableTransitions.map((status) => <option key={status} value={status}>{orderStatusLabel(status as OrderStatus)}</option>)}</Select>
+            <Select label={messages.ar.status} name="status" required><option disabled value="">{messages.ar.nextStatus}</option>{availableStatuses.map((status) => <option key={status} value={status}>{orderStatusLabel(status as OrderStatus)}</option>)}</Select>
             <StorefrontSubmitButton pendingText={messages.ar.saving}>{messages.ar.updateStatus}</StorefrontSubmitButton>
           </form>
         </Card>

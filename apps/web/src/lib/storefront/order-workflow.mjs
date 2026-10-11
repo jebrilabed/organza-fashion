@@ -15,6 +15,17 @@ export function canTransitionOrder(from, to) {
   return allowedOrderTransitions(from).includes(to);
 }
 
+export function availableAdminOrderStatuses(status) {
+  if (!Object.hasOwn(transitions, status)) return [];
+  return Object.keys(transitions).filter((nextStatus) =>
+    nextStatus !== status && !(nextStatus === "CANCELLED" && ["SHIPPED", "DELIVERED"].includes(status))
+  );
+}
+
+export function canAdminSetOrderStatus(from, to) {
+  return availableAdminOrderStatuses(from).includes(to);
+}
+
 export function parseCheckoutInput(formData) {
   const readText = (field) => {
     const value = formData.get(field);

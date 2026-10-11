@@ -37,6 +37,7 @@ export async function updateOrderStatusAction(formData: FormData) {
     if (error instanceof AuthorizationDeniedError) redirect("/admin/orders?notice=denied");
     if (error instanceof StorefrontOperationError && error.reason === "missing-sku") notice = "missingSku";
     else if (error instanceof StorefrontOperationError && error.reason === "restock-unavailable") notice = "restockUnavailable";
+    else if (error instanceof StorefrontOperationError && error.reason === "stock-unavailable") notice = "reserveUnavailable";
     else {
       const code = error && typeof error === "object" && "code" in error ? String(error.code) : "unknown";
       console.error("Admin order status update failed.", { code });

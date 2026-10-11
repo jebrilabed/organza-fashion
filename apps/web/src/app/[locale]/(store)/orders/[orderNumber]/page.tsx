@@ -58,7 +58,7 @@ export default async function MyOrderDetails({ params }: { params: Promise<{ ord
             </table>
           </div>
           <p className="store-summary__row"><span>{messages.ar.subtotal}</span><strong>{formatMoney(order.subtotal, order.currency)}</strong></p>
-          <p className="store-summary__row"><span>{messages.ar.shippingCost}</span><strong>{formatMoney(order.shippingCost, order.currency)}</strong></p>
+          <p className="store-summary__row"><span>{messages.ar.shippingCost}</span><strong>{order.shippingCost.isZero() ? messages.ar.shippingFree : formatMoney(order.shippingCost, order.currency)}</strong></p>
           <p className="store-summary__row"><span>{messages.ar.total}</span><strong>{formatMoney(order.total, order.currency)}</strong></p>
         </Card>
       </Container>

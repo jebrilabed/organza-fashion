@@ -5,14 +5,14 @@ import { CartStatus, Locale, OrderStatus, PaymentMethod, PaymentStatus, ProductS
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { storeCurrency } from "@/lib/phase7/validation.mjs";
-import { canTransitionOrder } from "./order-workflow.mjs";
+import { canAdminSetOrderStatus } from "./order-workflow.mjs";
 import { checkoutCartBinding, checkoutQuoteMatches } from "./checkout-security.mjs";
 import { calculateCheckoutAmounts } from "./checkout-pricing.mjs";
 import { buildOrderNotificationEvent, getOrderNotificationEventType } from "@/lib/notifications/order-events.mjs";
 import { getBankTransferDetails } from "./payment-settings";
 
 export class StorefrontOperationError extends Error {
-  constructor(readonly reason: "empty-cart" | "stock-changed" | "invalid-cart" | "cart-changed" | "invalid-checkout-attempt" | "invalid-transition" | "missing-sku" | "already-cancelled" | "restock-unavailable" | "currency-not-configured" | "store-inactive" | "address-unavailable" | "invalid-payment") {
+  constructor(readonly reason: "empty-cart" | "stock-changed" | "invalid-cart" | "cart-changed" | "invalid-checkout-attempt" | "invalid-transition" | "missing-sku" | "already-cancelled" | "restock-unavailable" | "stock-unavailable" | "currency-not-configured" | "store-inactive" | "address-unavailable" | "invalid-payment") {
     super(reason);
     this.name = "StorefrontOperationError";
   }
@@ -304,7 +304,7 @@ export async function changeOrderStatus(orderId: string, nextStatus: OrderStatus
     if (order.status === OrderStatus.CANCELLED && nextStatus === OrderStatus.CANCELLED) {
       return { ok: false as const, reason: "already-cancelled" as const };
     }
-    if (!canTransitionOrder(order.status, nextStatus)) return { ok: false as const, reason: "transition" as const };
+    if (!canAdminSetOrderStatus(order.status, nextStatus)) return { ok: false as const, reason: "transition" as const };
     if (nextStatus === OrderStatus.CANCELLED && order.items.some((item) =>
       item.skuId === null || !Number.isSafeInteger(item.quantity) || item.quantity <= 0
     )) {
@@ -321,6 +321,20 @@ export async function changeOrderStatus(orderId: string, nextStatus: OrderStatus
         if (latest?.status === OrderStatus.CANCELLED) return { ok: false as const, reason: "already-cancelled" as const };
       }
       return { ok: false as const, reason: "transition" as const };
+    }
+
+    const reactivatingCancelledOrder = order.status === OrderStatus.CANCELLED;
+    if (reactivatingCancelledOrder) {
+      for (const item of order.items) {
+        if (!item.skuId || !Number.isSafeInteger(item.quantity) || item.quantity <= 0) {
+          throw new StorefrontOperationError("stock-unavailable");
+        }
+        const reserved = await tx.productSku.updateMany({
+          where: { id: item.skuId, stockQuantity: { gte: item.quantity } },
+          data: { stockQuantity: { decrement: item.quantity } },
+        });
+        if (reserved.count !== 1) throw new StorefrontOperationError("stock-unavailable");
+      }
     }
 
     if (nextStatus === OrderStatus.CANCELLED) {
@@ -345,15 +359,19 @@ export async function changeOrderStatus(orderId: string, nextStatus: OrderStatus
           from: order.status,
           to: nextStatus,
           inventoryRestored: nextStatus === OrderStatus.CANCELLED,
+          inventoryReserved: reactivatingCancelledOrder,
           ...(nextStatus === OrderStatus.CANCELLED ? {
             restockedItems: order.items.map(({ skuId, quantity }) => ({ skuId, quantity })),
+          } : {}),
+          ...(reactivatingCancelledOrder ? {
+            reservedItems: order.items.map(({ skuId, quantity }) => ({ skuId, quantity })),
           } : {}),
         },
       },
     });
     const eventType = getOrderNotificationEventType(nextStatus);
     const notification = eventType && buildOrderNotificationEvent(eventType, order);
-    if (notification) await tx.notificationOutbox.create({ data: notification });
+    if (notification) await tx.notificationOutbox.createMany({ data: [notification], skipDuplicates: true });
     return { ok: true as const, orderNumber: order.orderNumber, from: order.status, to: nextStatus };
   });
 }
