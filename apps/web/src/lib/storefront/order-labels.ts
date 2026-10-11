@@ -1,4 +1,4 @@
-import { OrderStatus, PaymentStatus } from "@/generated/prisma/enums";
+import { OrderStatus, PaymentMethod, PaymentStatus } from "@/generated/prisma/enums";
 import { storefrontMessages as messages } from "./messages";
 
 const statusLabels: Record<OrderStatus, string> = {
@@ -25,4 +25,8 @@ const paymentStatusLabels: Record<PaymentStatus, string> = {
 
 export function paymentStatusLabel(status: PaymentStatus) {
   return paymentStatusLabels[status];
+}
+
+export function paymentMethodLabel(method: PaymentMethod) {
+  return method === PaymentMethod.BANK_TRANSFER ? messages.ar.paymentMethodBankTransfer : messages.ar.paymentMethodCashOnDelivery;
 }

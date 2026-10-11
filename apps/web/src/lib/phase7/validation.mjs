@@ -5,14 +5,23 @@ export const storeCurrency = "ILS";
 export function parseRegistration(data) {
   const name = text(data.get("name"));
   const email = text(data.get("email")).toLowerCase();
+  const countryCode = text(data.get("countryCode"));
+  const localPhone = text(data.get("phone")).replace(/[\s().-]/g, "").replace(/^0+/, "");
+  const phone = `${countryCode}${localPhone}`;
+  const phoneDigits = phone.replace(/\D/g, "").length;
+  const addressLine = text(data.get("addressLine"));
+  const city = text(data.get("city"));
   const password = typeof data.get("password") === "string" ? data.get("password") : "";
   const confirmation = typeof data.get("confirmation") === "string" ? data.get("confirmation") : "";
   const errors = {};
   if (!name || name.length > 120) errors.name = "invalidName";
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) errors.email = "invalidEmail";
+  if (!/^\+[1-9]\d{0,3}$/.test(countryCode) || !/^\d+$/.test(localPhone) || phoneDigits < 8 || phoneDigits > 15) errors.phone = "invalidPhone";
+  if (!addressLine || addressLine.length > 500) errors.addressLine = "invalidAddress";
+  if (!city || city.length > 120) errors.city = "invalidCity";
   if (password.length < 8 || password.length > 128) errors.password = "invalidPassword";
   if (password !== confirmation) errors.confirmation = "passwordMismatch";
-  return Object.keys(errors).length ? { ok: false, errors } : { ok: true, value: { name, email, password } };
+  return Object.keys(errors).length ? { ok: false, errors } : { ok: true, value: { name, email, phone, addressLine, city, password } };
 }
 
 export function parseProfile(data) {
@@ -43,6 +52,9 @@ export function parseStoreSettings(data) {
   const value = {
     storeName: text(data.get("storeName")), description: text(data.get("description")) || null,
     currency: storeCurrency, contactPhone: text(data.get("contactPhone")) || null,
+    whatsappNumber: text(data.get("whatsappNumber")) || null,
+    bankName: text(data.get("bankName")), bankAccountName: text(data.get("bankAccountName")),
+    bankAccountNumber: text(data.get("bankAccountNumber")), bankIban: text(data.get("bankIban")),
     email: text(data.get("email")).toLowerCase() || null, address: text(data.get("address")) || null,
     defaultLocale: text(data.get("defaultLocale")), isActive: data.get("isActive") === "on",
   };
@@ -50,6 +62,8 @@ export function parseStoreSettings(data) {
   if (!value.storeName || value.storeName.length > 120) errors.storeName = "invalidName";
   if (value.description && value.description.length > 2000) errors.description = "tooLong";
   if (value.contactPhone && (value.contactPhone.length > 40 || !/^\+?[()\d\s.-]+$/.test(value.contactPhone))) errors.contactPhone = "invalidPhone";
+  if (value.whatsappNumber && (value.whatsappNumber.length > 40 || !/^\+?[()\d\s.-]+$/.test(value.whatsappNumber))) errors.whatsappNumber = "invalidPhone";
+  if (value.bankName.length > 120 || value.bankAccountName.length > 120 || value.bankAccountNumber.length > 64 || value.bankIban.length > 64) errors.bankDetails = "tooLong";
   if (value.email && (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.email) || value.email.length > 254)) errors.email = "invalidEmail";
   if (value.address && value.address.length > 500) errors.address = "tooLong";
   if (value.defaultLocale !== "ar") errors.defaultLocale = "invalidLocale";

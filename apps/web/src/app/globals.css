@@ -2,3 +2,48 @@
 @import "tailwindcss";
 @import "../styles/tokens.css";
 @import "../styles/primitives.css";
+
+html,
+body {
+  inline-size: 100%;
+  overflow-x: clip;
+}
+
+img,
+video,
+canvas {
+  max-inline-size: 100%;
+}
+
+input,
+select,
+textarea {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+main,
+section,
+article,
+form,
+fieldset {
+  min-inline-size: 0;
+}
+
+.page-container,
+.reading-container {
+  min-inline-size: 0;
+}
+
+@media (max-width: 40rem) {
+  .page-container,
+  .reading-container {
+    padding-inline-start: max(.85rem, env(safe-area-inset-right));
+    padding-inline-end: max(.85rem, env(safe-area-inset-left));
+  }
+
+  .ui-button {
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
+  }
+}

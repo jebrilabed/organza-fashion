@@ -13,6 +13,7 @@ export type PublicSiteData = {
   ogImage: string | null;
   email: string | null;
   phone: string | null;
+  whatsappNumber: string | null;
   address: string | null;
   currency: string | null;
   storeActive: boolean | null;
@@ -58,15 +59,17 @@ export const getPublicSiteData = cache(async (): Promise<PublicSiteData> => {
     ogImage: null,
     email: null,
     phone: null,
+    whatsappNumber: null,
     address: null,
     currency: storeCurrency,
     storeActive: null,
   };
   try {
     const [settings, seo] = await Promise.all([
-      prisma.storeSettings.findUnique({ where: { id: "singleton" }, select: { storeName: true, description: true, email: true, contactPhone: true, address: true, isActive: true } }),
+      prisma.storeSettings.findUnique({ where: { id: "singleton" }, select: { storeName: true, description: true, email: true, whatsappNumber: true, address: true, isActive: true } }),
       prisma.storeSeoSettings.findUnique({ where: { locale: "AR" }, select: { description: true, defaultOgImageUrl: true } }),
     ]);
+    const whatsappNumber = settings?.whatsappNumber?.trim() || null;
     return {
       name: siteConfig.name,
       storeName: settings?.storeName?.trim() || siteConfig.name,
@@ -74,7 +77,8 @@ export const getPublicSiteData = cache(async (): Promise<PublicSiteData> => {
       storeDescription: brandedText(settings?.description),
       ogImage: publicHttpsUrl(seo?.defaultOgImageUrl),
       email: settings?.email?.trim() || null,
-      phone: settings?.contactPhone?.trim() || null,
+      phone: whatsappNumber,
+      whatsappNumber,
       address: addressText(settings?.address),
       currency: storeCurrency,
       storeActive: settings?.isActive ?? null,

@@ -120,11 +120,9 @@ async function generateCategorySlug(nameAr: string, nameEn: string) {
 }
 
 async function generateProductSkuCode() {
-  let skuCode: string;
-  do {
-    skuCode = `FAR-${randomUUID().toUpperCase()}`;
-  } while (await prisma.productSku.findUnique({ where: { skuCode }, select: { id: true } }));
-  return skuCode;
+  // UUIDs make collisions negligible. Avoid querying through the global Prisma
+  // client here: callers may already hold an interactive transaction connection.
+  return `FAR-${randomUUID().toUpperCase()}`;
 }
 
 export async function saveProduct(_previous: AdminActionState, formData: FormData): Promise<AdminActionState> {
@@ -202,6 +200,7 @@ export async function saveProduct(_previous: AdminActionState, formData: FormDat
         id = created.id;
 
         if (input.hasVariants) {
+          const createdSkuIds: { id: string; colorName: string }[] = [];
           for (let i = 0; i < input.variants.length; i++) {
             const v = input.variants[i];
             const variantSkuCode = await generateProductSkuCode();
@@ -214,7 +213,7 @@ export async function saveProduct(_previous: AdminActionState, formData: FormDat
             if (v.sizeLabel) {
               variantOptions["Size"] = v.sizeLabel;
             }
-            await tx.productSku.create({
+            const createdSku = await tx.productSku.create({
               data: {
                 productId: id,
                 skuCode: variantSkuCode,
@@ -225,8 +224,29 @@ export async function saveProduct(_previous: AdminActionState, formData: FormDat
                 isActive: input.isActive,
                 variantOptions,
               },
+              select: { id: true },
             });
+            if (v.colorName) createdSkuIds.push({ id: createdSku.id, colorName: v.colorName });
           }
+          // Assign ColorImageUrl from uploaded images that have a colorName
+          const imageColorMap = new Map<string, string>();
+          for (const img of input.uploadedImages) {
+            if (img.colorName) imageColorMap.set(img.colorName, img.url);
+          }
+          if (imageColorMap.size > 0) {
+            const seenColors = new Set<string>();
+            for (const { id: skuId, colorName } of createdSkuIds) {
+              if (!seenColors.has(colorName) && imageColorMap.has(colorName)) {
+                seenColors.add(colorName);
+                const sku = await tx.productSku.findUnique({ where: { id: skuId }, select: { variantOptions: true } });
+                if (sku?.variantOptions && typeof sku.variantOptions === "object") {
+                  const opts = { ...(sku.variantOptions as Record<string, string>), ColorImageUrl: imageColorMap.get(colorName)! };
+                  await tx.productSku.update({ where: { id: skuId }, data: { variantOptions: opts } });
+                }
+              }
+            }
+          }
+
         } else {
           const skuCode = await generateProductSkuCode();
           await tx.productSku.create({

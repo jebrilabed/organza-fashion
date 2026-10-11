@@ -13,7 +13,11 @@ export async function registerCustomer(_previous: RegistrationState, formData: F
   try {
     const passwordHash = await hashPassword(parsed.value.password);
     await prisma.user.create({
-      data: { name: parsed.value.name, email: parsed.value.email, passwordHash, role: "CUSTOMER", customer: { create: { name: parsed.value.name, email: parsed.value.email } } },
+      data: {
+        name: parsed.value.name, email: parsed.value.email, passwordHash, role: "CUSTOMER",
+        customer: { create: { name: parsed.value.name, email: parsed.value.email, phone: parsed.value.phone } },
+        addresses: { create: { fullName: parsed.value.name, phone: parsed.value.phone, addressLine: parsed.value.addressLine, city: parsed.value.city, isDefault: true } },
+      },
       select: { id: true },
     });
   } catch (error) {
@@ -27,5 +31,5 @@ export async function registerCustomer(_previous: RegistrationState, formData: F
     }
     return { error: messages.ar.registrationFailed };
   }
-  redirect("/ar/login?registered=1");
+  redirect(formData.get("next") === "/ar/checkout" ? "/ar/login?registered=1&next=%2Far%2Fcheckout" : "/ar/login?registered=1");
 }

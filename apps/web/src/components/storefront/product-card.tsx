@@ -33,7 +33,7 @@ export function ProductCard({ product, currency }: ProductCardProps) {
     <Card className="store-product-card">
       <Link className="store-product-card__image" href={`/ar/products/${encodeURIComponent(translation.slug)}`} aria-label={translation.name}>
         {image ? (
-          <div className="flex items-center justify-center bg-slate-50 aspect-[4/5] overflow-hidden relative"><SafeProductImage alt={image.altText || translation.name} sizes="(max-width: 640px) 50vw, (max-width: 1000px) 33vw, 25vw" src={image.url} /></div>
+          <div className="absolute inset-0 h-full w-full overflow-hidden bg-slate-50"><SafeProductImage alt={image.altText || translation.name} sizes="(max-width: 640px) 50vw, (max-width: 1000px) 33vw, 25vw" src={image.url} /></div>
         ) : (
           <span className="store-product-card__no-image">{messages.ar.noImage}</span>
         )}

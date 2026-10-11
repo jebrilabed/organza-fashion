@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 
 import { SafeProductImage } from "@/components/storefront/safe-product-image";
 import { storefrontMessages as messages } from "@/lib/storefront/messages";
@@ -12,40 +12,18 @@ type ImageType = {
 
 export function ProductGallery({ images, altPrefix }: { images: ImageType[], altPrefix: string }) {
   const [mainImage, setMainImage] = useState<ImageType | null>(images.length > 0 ? images[0] : null);
-
-  const currentIndex = mainImage ? images.findIndex(img => img.url === mainImage.url) : 0;
-  
-  const scrollRef = useRef<HTMLDivElement>(null);
-  
-  const scrollThumbnails = (direction: "left" | "right") => {
-    if (scrollRef.current) {
-      const scrollAmount = direction === "left" ? -250 : 250;
-      scrollRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
-    }
-  };
-
-  const handlePrev = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (images.length <= 1) return;
-    const safeIndex = currentIndex === -1 ? 0 : currentIndex;
-    const prevIndex = (safeIndex - 1 + images.length) % images.length;
-    setMainImage(images[prevIndex]);
-  };
-
-  const handleNext = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (images.length <= 1) return;
-    const safeIndex = currentIndex === -1 ? 0 : currentIndex;
-    const nextIndex = (safeIndex + 1) % images.length;
-    setMainImage(images[nextIndex]);
-  };
+  const [thumbnailPage, setThumbnailPage] = useState(0);
+  const pageCount = Math.ceil(images.length / 5);
+  const visibleImages = images.slice(thumbnailPage * 5, thumbnailPage * 5 + 5);
 
   useEffect(() => {
-    const handler = (e: any) => {
-      const newUrl = e.detail;
+    const handler = (event: Event) => {
+      const newUrl = (event as CustomEvent<string>).detail;
       if (!newUrl) return;
-      const found = images.find(img => img.url === newUrl) || { url: newUrl, altText: altPrefix };
+      const imageIndex = images.findIndex((image) => image.url === newUrl);
+      const found = imageIndex >= 0 ? images[imageIndex] : { url: newUrl, altText: altPrefix };
       setMainImage(found);
+      if (imageIndex >= 0) setThumbnailPage(Math.floor(imageIndex / 5));
     };
     window.addEventListener("updateProductImage", handler);
     return () => window.removeEventListener("updateProductImage", handler);
@@ -65,6 +43,7 @@ export function ProductGallery({ images, altPrefix }: { images: ImageType[], alt
     <div className="store-product-detail__gallery flex flex-col gap-4">
       <div className="store-product-detail__image rounded-2xl overflow-hidden border border-[var(--color-border)] shadow-sm transition-all duration-300 hover:shadow-md bg-slate-50 w-full max-w-[490px] mx-auto relative aspect-[4/5] lg:aspect-square group">
         <SafeProductImage
+          key={mainImage.url}
           alt={mainImage.altText || altPrefix}
           sizes="(max-width: 960px) 100vw, 50vw"
           priority
@@ -73,49 +52,41 @@ export function ProductGallery({ images, altPrefix }: { images: ImageType[], alt
       </div>
 
       {images.length > 1 && (
-        <div className="relative group/thumbs mt-3">
-          {/* Scroll Right (Previous in RTL) */}
-          <button
+        <div className={`store-gallery-thumbnails${pageCount > 1 ? " store-gallery-thumbnails--paged" : ""}`}>
+          {pageCount > 1 && <button
+            aria-label={messages.ar.previous}
+            className="store-gallery-thumbnails__arrow"
+            disabled={thumbnailPage === 0}
+            onClick={() => setThumbnailPage((page) => Math.max(0, page - 1))}
             type="button"
-            onClick={() => scrollThumbnails('right')}
-            className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-white/95 backdrop-blur-md border border-slate-200 text-slate-800 shadow-md transition-all duration-300 hover:scale-110 hover:text-[var(--color-primary)] hover:border-[var(--color-primary)] z-20"
-            aria-label="Scroll right"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-          </button>
-          
-          {/* Scroll Left (Next in RTL) */}
-          <button
-            type="button"
-            onClick={() => scrollThumbnails('left')}
-            className="absolute left-1 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-white/95 backdrop-blur-md border border-slate-200 text-slate-800 shadow-md transition-all duration-300 hover:scale-110 hover:text-[var(--color-primary)] hover:border-[var(--color-primary)] z-20"
-            aria-label="Scroll left"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-          </button>
-
-          <div ref={scrollRef} className="flex flex-nowrap overflow-x-auto gap-3 pb-2 snap-x snap-mandatory scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-            {images.map((image, index) => {
+          ><svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="m9 18 6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg></button>}
+          <div className="store-gallery-thumbnails__track">
+            {visibleImages.map((image) => {
+              const index = images.findIndex((item) => item.url === image.url);
               const isSelected = mainImage.url === image.url;
-              return (
-                <button
-                  type="button"
-                  key={`${image.url}-${index}`}
-                  onClick={() => setMainImage(image)}
-                  className={`store-product-detail__thumbnail shrink-0 w-20 sm:w-24 snap-start relative rounded-xl overflow-hidden border-2 transition-all duration-200 aspect-[3/4] focus:outline-none ${isSelected
-                    ? "border-[var(--color-primary)] shadow-md z-10"
-                    : "border-transparent opacity-70 hover:opacity-100 hover:border-slate-300 hover:shadow-sm"
-                    }`}
-                >
-                  <SafeProductImage
-                    alt={image.altText || `${altPrefix} ${index + 1}`}
-                    sizes="120px"
-                    src={image.url}
-                  />
-                </button>
-              );
+              return <button
+                aria-current={isSelected ? "true" : undefined}
+                aria-label={`${messages.ar.image} ${index + 1}`}
+                className={`store-product-detail__thumbnail${isSelected ? " is-selected" : ""}`}
+                key={`${image.url}-${index}`}
+                onClick={() => setMainImage(image)}
+                type="button"
+              >
+                <SafeProductImage
+                  alt={image.altText || `${altPrefix} ${index + 1}`}
+                  sizes="(max-width: 640px) 15vw, 68px"
+                  src={image.url}
+                />
+              </button>;
             })}
           </div>
+          {pageCount > 1 && <button
+            aria-label={messages.ar.next}
+            className="store-gallery-thumbnails__arrow"
+            disabled={thumbnailPage === pageCount - 1}
+            onClick={() => setThumbnailPage((page) => Math.min(pageCount - 1, page + 1))}
+            type="button"
+          ><svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="m15 18-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg></button>}
         </div>
       )}
     </div>

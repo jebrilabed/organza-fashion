@@ -9,6 +9,7 @@ import { siteConfig } from "@/lib/config/site";
 import { getPublicSiteData } from "@/lib/seo/site-data";
 import { buildBreadcrumbData, canonicalUrl } from "@/lib/seo/public-seo.mjs";
 import { decodeRouteSlug } from "@/lib/i18n/route-slug";
+import { whatsappUrl } from "@/lib/utils/whatsapp";
 
 type PageProps = { params: Promise<{ locale: string; slug: string }> };
 
@@ -65,7 +66,7 @@ export default async function PublicContentPage({ params }: PageProps) {
     <StoreBreadcrumbs items={breadcrumbs} jsonLd={buildBreadcrumbData(breadcrumbs, siteConfig.url)} />
     <article className="store-content-page"><header className="store-page-heading"><h1>{title}</h1></header>
       {page?.body && <div className="store-content-page__body">{page.body}</div>}
-      {slug === "contact" && hasContactData && <section className="store-contact-details"><h2>معلومات التواصل</h2><p>{store.storeName}</p>{store.phone && <p>الهاتف: <a href={`tel:${store.phone}`}>{store.phone}</a></p>}{store.email && <p>البريد الإلكتروني: <a href={`mailto:${store.email}`}>{store.email}</a></p>}{addressValue && <p>العنوان: {addressValue}</p>}</section>}
+      {slug === "contact" && hasContactData && <section className="store-contact-details"><h2>معلومات التواصل</h2><p>{store.storeName}</p>{store.phone && <p>واتساب: <a href={whatsappUrl(store.phone, `مرحباً، أود الاستفسار عن ${store.storeName}`)} target="_blank" rel="noopener noreferrer" dir="ltr">{store.phone}</a></p>}{store.email && <p>البريد الإلكتروني: <a href={`mailto:${store.email}`}>{store.email}</a></p>}{addressValue && <p>العنوان: {addressValue}</p>}</section>}
     </article>
   </Container></main>;
 }

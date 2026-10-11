@@ -8,9 +8,11 @@ import { storefrontMessages } from "@/lib/storefront/messages";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
-export default async function RegisterPage({ params }: { params: Promise<{ locale: string }> }) {
+export default async function RegisterPage({ params, searchParams }: { params: Promise<{ locale: string }>; searchParams: Promise<{ next?: string }> }) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
+  const { next } = await searchParams;
+  const nextPath = next === "/ar/checkout" ? next : "";
   return (
     <main className="auth-page">
       <Container>
@@ -23,7 +25,7 @@ export default async function RegisterPage({ params }: { params: Promise<{ local
             <h1 className="text-2xl font-semibold">{messages.ar.registerTitle}</h1>
             <p className="text-sm text-muted">{messages.ar.registerIntro}</p>
           </div>
-          <RegisterForm />
+          <RegisterForm nextPath={nextPath} />
         </Card>
       </Container>
     </main>

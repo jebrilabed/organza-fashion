@@ -10,6 +10,7 @@ const invalidCredentialsMessage = "تعذر تسجيل الدخول. تحقق م
 export async function loginAction(_previousState: LoginState, formData: FormData): Promise<LoginState> {
   const email = formData.get("email");
   const password = formData.get("password");
+  const returnToCheckout = formData.get("next") === "/ar/checkout";
 
   if (
     typeof email !== "string" ||
@@ -30,7 +31,7 @@ export async function loginAction(_previousState: LoginState, formData: FormData
     await signIn("credentials", {
       email: email.trim(),
       password,
-      redirectTo: user?.role === "ADMIN" ? "/admin" : "/ar",
+      redirectTo: user?.role === "ADMIN" ? "/admin" : returnToCheckout ? "/ar/checkout" : "/ar",
     });
   } catch (error) {
     if (error instanceof AuthError) return { error: invalidCredentialsMessage };

@@ -10,8 +10,8 @@ function imageLoader({ src, width }: { src: string; width: number }) {
 }
 
 export function SafeProductImage({ src, alt, sizes, priority = false, className }: { src: string; alt: string; sizes?: string; priority?: boolean; className?: string }) {
-  const [failed, setFailed] = useState(false);
-  if (failed) return <span className="store-image-empty" role="img" aria-label={alt}>{messages.ar.imageUnavailable}</span>;
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  if (failedSrc === src) return <span className="store-image-empty" role="img" aria-label={alt}>{messages.ar.imageUnavailable}</span>;
 
   let isPublicHttpsImage = false;
   try {
@@ -33,7 +33,7 @@ export function SafeProductImage({ src, alt, sizes, priority = false, className 
           loader={imageLoader}
           priority={priority}
           loading={priority ? "eager" : "lazy"}
-          onError={() => setFailed(true)}
+          onError={() => setFailedSrc(src)}
           style={{ objectFit: "contain" }}
         />
       </div>
@@ -48,6 +48,6 @@ export function SafeProductImage({ src, alt, sizes, priority = false, className 
     loader={imageLoader}
     priority={priority}
     loading={priority ? "eager" : "lazy"}
-    onError={() => setFailed(true)}
+    onError={() => setFailedSrc(src)}
   />;
 }

@@ -1,8 +1,14 @@
 import Link from "next/link";
 import Image from "next/image";
-import { auth } from "@/auth";
+import { auth, signOut } from "@/auth";
 import { getCartCount } from "@/lib/storefront/cart";
 import { storefrontMessages as messages } from "@/lib/storefront/messages";
+import { phase7Messages } from "@/lib/phase7/messages";
+
+async function storefrontSignOut() {
+  "use server";
+  await signOut({ redirectTo: "/ar/login" });
+}
 
 export async function StorefrontHeader() {
   let count = 0;
@@ -53,6 +59,9 @@ export async function StorefrontHeader() {
             <AccountIcon />
             <span>{accountLabel}</span>
           </Link>
+          {isSignedIn && <form action={storefrontSignOut} className="store-header__sign-out-form">
+            <button className="store-icon-link store-header__sign-out" type="submit">{phase7Messages.ar.signOut}</button>
+          </form>}
           <Link aria-label={messages.ar.cartCount.replace("{count}", String(count))} className="store-icon-link store-header__cart" href="/ar/cart">
             <CartIcon />
             <span>{messages.ar.cart}</span>
@@ -72,7 +81,10 @@ export async function StorefrontHeader() {
                 <button type="submit">بحث</button>
               </form>
               <Link href={accountHref}>{accountLabel}</Link>
-              <Link href="/ar/register">{messages.ar.register}</Link>
+              {isSignedIn && <form action={storefrontSignOut} className="store-header__mobile-sign-out">
+                <button type="submit">{phase7Messages.ar.signOut}</button>
+              </form>}
+              {!isSignedIn && <Link href="/ar/register">{messages.ar.register}</Link>}
             </nav>
           </details>
         </div>

@@ -54,7 +54,8 @@ function uploadedImageAssets(value) {
       if (url.protocol !== "https:" || url.hostname !== "res.cloudinary.com" || url.username || url.password || entry.url.length > 2048 || !/^farasha\/products\/[0-9a-f-]{36}$/i.test(publicId) || !url.pathname.includes(`/image/upload/`) || !url.pathname.includes(publicId)) {
         return { images: [], error: "invalidImageUrl" };
       }
-      images.push({ url: url.href, publicId });
+      const colorName = (entry.colorName && typeof entry.colorName === "string") ? entry.colorName.trim() : undefined;
+      images.push({ url: url.href, publicId, ...(colorName ? { colorName } : {}) });
     } catch {
       return { images: [], error: "invalidImageUrl" };
     }

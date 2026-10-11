@@ -10,7 +10,7 @@ import { prisma } from "@/lib/db/prisma";
 import { adminMessages } from "@/lib/admin/messages";
 import { allowedOrderTransitions } from "@/lib/storefront/order-workflow.mjs";
 import { addressParts, formatMoney } from "@/lib/storefront/format";
-import { orderStatusLabel, paymentStatusLabel } from "@/lib/storefront/order-labels";
+import { orderStatusLabel, paymentMethodLabel, paymentStatusLabel } from "@/lib/storefront/order-labels";
 import { storefrontMessages as messages } from "@/lib/storefront/messages";
 import { updateOrderStatusAction, updatePaymentStatusAction } from "../actions";
 
@@ -27,6 +27,8 @@ export default async function AdminOrderDetails({ params, searchParams }: {
       orderNumber: true,
       status: true,
       paymentStatus: true,
+      paymentMethod: true,
+      paymentReceipt: { select: { orderId: true } },
       contactName: true,
       contactEmail: true,
       contactPhone: true,
@@ -53,7 +55,7 @@ export default async function AdminOrderDetails({ params, searchParams }: {
       <div className="store-admin-order-info">
         <Card><h2>{messages.ar.customer}</h2><p>{order.contactName}</p><p dir="ltr">{order.contactPhone}</p>{order.contactEmail && <p dir="ltr">{order.contactEmail}</p>}</Card>
         <Card><h2>{messages.ar.addressInfo}</h2><p>{address.address}</p><p>{address.city}</p></Card>
-        <Card><h2>{messages.ar.adminOrderDetails}</h2><p>{messages.ar.orderDate}: {new Intl.DateTimeFormat("ar-SA", { dateStyle: "medium", timeStyle: "short" }).format(order.createdAt)}</p><p>{messages.ar.orderDateUpdated}: {new Intl.DateTimeFormat("ar-SA", { dateStyle: "medium", timeStyle: "short" }).format(order.updatedAt)}</p><p>{messages.ar.orderStatus}: {orderStatusLabel(order.status)}</p><p>{messages.ar.paymentStatus}: {paymentStatusLabel(order.paymentStatus)}</p></Card>
+        <Card><h2>{messages.ar.adminOrderDetails}</h2><p>{messages.ar.orderDate}: {new Intl.DateTimeFormat("ar-SA", { dateStyle: "medium", timeStyle: "short" }).format(order.createdAt)}</p><p>{messages.ar.orderDateUpdated}: {new Intl.DateTimeFormat("ar-SA", { dateStyle: "medium", timeStyle: "short" }).format(order.updatedAt)}</p><p>{messages.ar.orderStatus}: {orderStatusLabel(order.status)}</p><p>{messages.ar.paymentStatus}: {paymentStatusLabel(order.paymentStatus)}</p><p>{messages.ar.paymentMethodLabel}: {paymentMethodLabel(order.paymentMethod)}</p>{order.paymentReceipt && <Link href={`/api/orders/${encodeURIComponent(order.orderNumber)}/payment-receipt`} target="_blank">{messages.ar.paymentReceiptLink}</Link>}</Card>
         <Card><h2>{messages.ar.customerNote}</h2><p>{order.customerNote || messages.ar.noNotes}</p></Card>
       </div>
       <Card className="admin-order-items-card">
@@ -62,10 +64,10 @@ export default async function AdminOrderDetails({ params, searchParams }: {
           <table className="ui-table admin-order-items-table">
             <thead><tr><th>{messages.ar.product}</th><th>{messages.ar.quantity}</th><th>{messages.ar.price}</th><th>{messages.ar.lineTotal}</th></tr></thead>
             <tbody>{order.items.map((item) => <tr key={item.id}>
-              <td>{item.productNameSnapshot}{typeof item.variantSnapshot === "object" && item.variantSnapshot && !Array.isArray(item.variantSnapshot) ? <small>{Object.entries(item.variantSnapshot).map(([key, value]) => `${key}: ${String(value)}`).join(" · ")}</small> : null}</td>
-              <td>{item.quantity}</td>
-              <td>{formatMoney(item.unitPrice, order.currency)}</td>
-              <td>{formatMoney(item.subtotal, order.currency)}</td>
+              <td data-label={messages.ar.product}>{item.productNameSnapshot}{typeof item.variantSnapshot === "object" && item.variantSnapshot && !Array.isArray(item.variantSnapshot) ? <small>{Object.entries(item.variantSnapshot).map(([key, value]) => `${key}: ${String(value)}`).join(" · ")}</small> : null}</td>
+              <td data-label={messages.ar.quantity}>{item.quantity}</td>
+              <td data-label={messages.ar.price}>{formatMoney(item.unitPrice, order.currency)}</td>
+              <td data-label={messages.ar.lineTotal}>{formatMoney(item.subtotal, order.currency)}</td>
             </tr>)}</tbody>
           </table>
         </div>

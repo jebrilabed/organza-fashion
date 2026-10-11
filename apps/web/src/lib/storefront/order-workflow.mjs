@@ -22,23 +22,28 @@ export function parseCheckoutInput(formData) {
   };
   const raw = {
     contactName: readText("contactName"),
+    contactEmail: readText("contactEmail").toLowerCase(),
     contactPhone: readText("contactPhone"),
     address: readText("address"),
     city: readText("city"),
     customerNote: readText("customerNote"),
   };
-  const addressId = readText("addressId");
+  const paymentMethod = readText("paymentMethod");
   const errors = {};
-  if (!addressId) {
-    if (!raw.contactName || raw.contactName.length > 200) errors.contactName = "validationName";
-    const digitCount = raw.contactPhone.replace(/\D/g, "").length;
-    if (raw.contactPhone.length > 40 || digitCount < 6 || !/^\+?[()\d\s.-]+$/.test(raw.contactPhone)) errors.contactPhone = "validationPhone";
-    if (!raw.address || raw.address.length > 500) errors.address = "validationAddress";
-    if (!raw.city || raw.city.length > 120) errors.city = "validationCity";
-  } else if (addressId.length > 64) errors.address = "validationAddress";
+  if (!raw.contactName || raw.contactName.length > 200) errors.contactName = "validationName";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw.contactEmail) || raw.contactEmail.length > 254) errors.contactEmail = "validationEmail";
+  const digitCount = raw.contactPhone.replace(/\D/g, "").length;
+  if (raw.contactPhone.length > 40 || digitCount < 8 || digitCount > 16 || !/^\+[1-9][()\d\s.-]+$/.test(raw.contactPhone)) errors.contactPhone = "validationPhone";
+  if (!raw.address || raw.address.length > 500) errors.address = "validationAddress";
+  if (!raw.city || raw.city.length > 120) errors.city = "validationCity";
+  if (!["CASH_ON_DELIVERY", "BANK_TRANSFER"].includes(paymentMethod)) errors.paymentMethod = "validationPaymentMethod";
+  if (paymentMethod === "BANK_TRANSFER") {
+    const receipt = formData.get("paymentReceipt");
+    if (!(typeof File !== "undefined" && receipt instanceof File && receipt.size > 0)) errors.paymentReceipt = "validationPaymentReceipt";
+  }
   if (raw.customerNote.length > 2000) errors.customerNote = "validationNote";
   if (Object.keys(errors).length) return { ok: false, errors, values: raw };
-  return { ok: true, value: addressId ? { ...raw, addressId } : raw };
+  return { ok: true, value: { ...raw, paymentMethod } };
 }
 
 export function parseCartQuantity(value) {

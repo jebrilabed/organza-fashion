@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { Locale, ProductStatus } from "@/generated/prisma/enums";
+import { Locale, PaymentMethod, ProductStatus } from "@/generated/prisma/enums";
 import { Prisma } from "@/generated/prisma/client";
 import { getCurrentUser } from "@/lib/auth/authorization";
 import { prisma } from "@/lib/db/prisma";
@@ -11,6 +11,7 @@ import { parseCartQuantity, parseCheckoutInput } from "@/lib/storefront/order-wo
 import { createOrderFromCart, StorefrontOperationError } from "@/lib/storefront/orders";
 import { checkoutOwnerBinding, verifyCheckoutAttemptToken } from "@/lib/storefront/checkout-security.mjs";
 import { storefrontMessages as messages } from "@/lib/storefront/messages";
+import { getBankTransferDetails } from "@/lib/storefront/payment-settings";
 
 const textField = (data: FormData, field: string) => {
   const value = data.get(field);
@@ -169,19 +170,35 @@ export async function clearCartAction() {
 export type CheckoutActionState = {
   error?: string;
   fieldErrors?: Record<string, string>;
-  values?: { contactName: string; contactPhone: string; address: string; city: string; customerNote: string; addressId?: string };
+  values?: { contactName: string; contactEmail: string; contactPhone: string; address: string; city: string; customerNote: string };
 };
 
 export async function submitCheckoutAction(_previousState: CheckoutActionState, formData: FormData): Promise<CheckoutActionState> {
+  const user = await getCurrentUser();
+  if (user?.role !== "CUSTOMER") redirect(user ? "/admin" : "/ar/login?next=%2Far%2Fcheckout");
   const parsed = parseCheckoutInput(formData);
   if (!parsed.ok) return { fieldErrors: parsed.errors, values: parsed.values };
   const checkoutValues = parsed.value;
+  let paymentReceipt: { mimeType: string; data: Uint8Array } | null = null;
+  if (checkoutValues.paymentMethod === PaymentMethod.BANK_TRANSFER) {
+    const uploaded = formData.get("paymentReceipt");
+    const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+    if (!(uploaded instanceof File) || uploaded.size < 1 || uploaded.size > 4 * 1024 * 1024 || !allowedTypes.has(uploaded.type)) {
+      return { fieldErrors: { paymentReceipt: "validationPaymentReceipt" }, values: checkoutValues };
+    }
+    const bytes = new Uint8Array(await uploaded.slice(0, 12).arrayBuffer());
+    const validSignature = uploaded.type === "image/jpeg" ? bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff
+      : uploaded.type === "image/png" ? bytes.length >= 8 && [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a].every((byte, index) => bytes[index] === byte)
+        : bytes.length >= 12 && String.fromCharCode(...bytes.slice(0, 4)) === "RIFF" && String.fromCharCode(...bytes.slice(8, 12)) === "WEBP";
+    if (!validSignature) return { fieldErrors: { paymentReceipt: "validationPaymentReceipt" }, values: checkoutValues };
+    paymentReceipt = { mimeType: uploaded.type, data: new Uint8Array(await uploaded.arrayBuffer()) };
+    const settings = await prisma.storeSettings.findUnique({ where: { id: "singleton" }, select: { configuration: true } });
+    if (!getBankTransferDetails(settings?.configuration)) return { fieldErrors: { paymentMethod: "validationPaymentMethod" }, values: checkoutValues };
+  }
   let checkoutStage = "session";
   try {
-    const user = await getCurrentUser();
-    const userId = user?.role === "CUSTOMER" ? user.id : null;
-    const guestTokenHash = userId ? null : await readCartTokenHash();
-    if (!userId && !guestTokenHash) return { error: messages.ar.cartEmptyError, values: checkoutValues };
+    const userId = user.id;
+    const guestTokenHash = null;
     const secret = process.env.AUTH_SECRET ?? "";
     const ownerBinding = userId
       ? checkoutOwnerBinding(secret, "customer", userId)
@@ -195,6 +212,7 @@ export async function submitCheckoutAction(_previousState: CheckoutActionState, 
     const order = await createOrderFromCart({
       guestTokenHash,
       userId,
+      paymentReceipt,
       ...checkoutValues,
       idempotencyKey: checkoutAttempt.idempotencyKey,
       quote: checkoutAttempt.quote,
@@ -214,6 +232,7 @@ export async function submitCheckoutAction(_previousState: CheckoutActionState, 
       if (error.reason === "currency-not-configured") return { error: messages.ar.currencyNotConfigured, values: checkoutValues };
       if (error.reason === "store-inactive") return { error: messages.ar.storeInactive, values: checkoutValues };
       if (error.reason === "address-unavailable") return { error: messages.ar.addressUnavailable, values: checkoutValues };
+      if (error.reason === "invalid-payment") return { fieldErrors: { paymentMethod: "validationPaymentMethod" }, values: checkoutValues };
     }
     // Next redirects are thrown control-flow errors and must pass through untouched.
     if (error && typeof error === "object" && "digest" in error) throw error;

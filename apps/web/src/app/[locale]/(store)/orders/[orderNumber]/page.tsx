@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/auth/authorization";
 import { prisma } from "@/lib/db/prisma";
 import { addressParts, formatMoney } from "@/lib/storefront/format";
 import { VariantOptionsDisplay } from "@/components/storefront/variant-options-display";
-import { orderStatusLabel, paymentStatusLabel } from "@/lib/storefront/order-labels";
+import { orderStatusLabel, paymentMethodLabel, paymentStatusLabel } from "@/lib/storefront/order-labels";
 import { storefrontMessages as messages } from "@/lib/storefront/messages";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
@@ -20,6 +20,8 @@ export default async function MyOrderDetails({ params }: { params: Promise<{ ord
       orderNumber: true,
       status: true,
       paymentStatus: true,
+      paymentMethod: true,
+      paymentReceipt: { select: { orderId: true } },
       createdAt: true,
       subtotal: true,
       shippingCost: true,
@@ -40,6 +42,8 @@ export default async function MyOrderDetails({ params }: { params: Promise<{ ord
           <header className="store-page-heading"><h1>{order.orderNumber}</h1><p>{messages.ar.orderDate}: {new Intl.DateTimeFormat("ar-SA", { dateStyle: "medium", timeStyle: "short" }).format(order.createdAt)}</p></header>
           <p>{messages.ar.orderStatus}: <Badge>{orderStatusLabel(order.status)}</Badge></p>
           <p>{messages.ar.paymentStatus}: {paymentStatusLabel(order.paymentStatus)}</p>
+          <p>{messages.ar.paymentMethodLabel}: {paymentMethodLabel(order.paymentMethod)}</p>
+          {order.paymentReceipt && <Link href={`/api/orders/${encodeURIComponent(order.orderNumber)}/payment-receipt`} target="_blank">{messages.ar.paymentReceiptLink}</Link>}
           {shippingAddress.address && <p>{messages.ar.addressInfo}: {shippingAddress.address}{shippingAddress.city ? `، ${shippingAddress.city}` : ""}</p>}
           <h2>{messages.ar.orderedItems}</h2>
           <div className="store-order-items-table-wrap" role="region" aria-label={messages.ar.orderedItems} tabIndex={0}>

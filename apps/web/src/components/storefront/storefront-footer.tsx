@@ -4,13 +4,14 @@ import { Locale } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db/prisma";
 import { getPublicSiteData } from "@/lib/seo/site-data";
 import { storefrontMessages as messages } from "@/lib/storefront/messages";
+import { whatsappUrl } from "@/lib/utils/whatsapp";
 
 export async function StorefrontFooter() {
   const [publicPages, storeData] = await Promise.all([
     prisma.contentPageTranslation.findMany({ where: { locale: Locale.AR, slug: { notIn: ["account", "admin", "api", "assistant", "cart", "categories", "checkout", "design-system", "faq", "login", "orders", "products", "register", "search"] }, contentPage: { isActive: true } }, orderBy: [{ contentPage: { pageKey: "asc" } }], select: { title: true, slug: true, contentPage: { select: { pageKey: true } } } }).catch(() => []),
     getPublicSiteData(),
   ]);
-  const hasContactDetails = Boolean(storeData.phone || storeData.email || storeData.address);
+  const hasContactDetails = Boolean(storeData.whatsappNumber || storeData.email || storeData.address);
   const hasContactPage = publicPages.some((page) => page.contentPage.pageKey === "contact");
 
   return (
@@ -28,7 +29,11 @@ export async function StorefrontFooter() {
           </p>
           {hasContactDetails && (
             <div className="store-footer__contact">
-              {storeData.phone && <a href={`tel:${storeData.phone}`} dir="ltr">{storeData.phone}</a>}
+              {storeData.whatsappNumber && (
+                <a href={whatsappUrl(storeData.whatsappNumber, `مرحباً، أود الاستفسار عن ${storeData.storeName}`)} target="_blank" rel="noopener noreferrer" dir="ltr" className="store-footer__whatsapp">
+                  {storeData.whatsappNumber}
+                </a>
+              )}
               {storeData.email && <a href={`mailto:${storeData.email}`}>{storeData.email}</a>}
               {storeData.address && <span>{storeData.address}</span>}
             </div>

@@ -2,6 +2,7 @@ export const adminMessages = {
   ar: {
     brand: "organza fashion",
     admin: "لوحة الإدارة",
+    openStore: "فتح المتجر",
     dashboard: "الرئيسية",
     products: "المنتجات",
     categories: "التصنيفات",

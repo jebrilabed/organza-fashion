@@ -253,19 +253,11 @@ export function ProductVariantSection({
                     key={c.name}
                     className="inline-flex items-center gap-2 border border-border bg-surface px-3 py-1 rounded-full text-sm shadow-sm"
                   >
-                    {c.imageUrl ? (
-                      <img src={c.imageUrl} alt="" className="w-5 h-5 rounded-full object-cover border border-black/20" />
-                    ) : (
-                      <span
-                        className="w-4 h-4 rounded-full border border-black/20"
-                        style={{ backgroundColor: c.hex }}
-                      />
-                    )}
+                    <span
+                      className="w-4 h-4 rounded-full border border-black/20"
+                      style={{ backgroundColor: c.hex }}
+                    />
                     <span className="font-medium">{c.name}</span>
-                    <label className="cursor-pointer text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1 rounded-md ml-2 hover:bg-blue-100 transition-colors" title="إضافة/تغيير الصورة">
-                      🖼️ إضافة صورة
-                      <input type="file" className="hidden" accept="image/*" onChange={(e) => uploadColorImage(c.name, e)} />
-                    </label>
                     <button
                       type="button"
                       onClick={() => handleRemoveColor(c.name)}

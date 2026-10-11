@@ -79,13 +79,21 @@ export async function saveStoreSettings(_previous: SettingsState, formData: Form
   try { admin = await requireAdmin(); } catch { return { error: messages.ar.settingsUnauthorized }; }
   const parsed = parseStoreSettings(formData);
   if (!parsed.ok) return { error: messages.ar.settingsInvalid };
-  const { address, ...values } = parsed.value;
+  const { address, bankName, bankAccountName, bankAccountNumber, bankIban, ...values } = parsed.value;
   try {
     await prisma.$transaction(async (tx) => {
+      const current = await tx.storeSettings.findUnique({ where: { id: "singleton" }, select: { configuration: true } });
+      const existingConfiguration = current?.configuration && typeof current.configuration === "object" && !Array.isArray(current.configuration)
+        ? current.configuration as Prisma.InputJsonObject
+        : {};
+      const configuration = {
+        ...existingConfiguration,
+        bankTransfer: { bankName, accountName: bankAccountName, accountNumber: bankAccountNumber, iban: bankIban },
+      } as Prisma.InputJsonObject;
       await tx.storeSettings.upsert({
         where: { id: "singleton" },
-        create: { id: "singleton", ...values, defaultLocale: Locale.AR, address: address ? { address } : Prisma.JsonNull },
-        update: { ...values, defaultLocale: Locale.AR, address: address ? { address } : Prisma.JsonNull },
+        create: { id: "singleton", ...values, defaultLocale: Locale.AR, address: address ? { address } : Prisma.JsonNull, configuration },
+        update: { ...values, defaultLocale: Locale.AR, address: address ? { address } : Prisma.JsonNull, configuration },
       });
       await tx.adminAuditLog.create({ data: { actorUserId: admin.id, action: "settings.store.update", entityType: "StoreSettings", entityId: "singleton", metadata: { changedFields: Object.keys(parsed.value) } } });
     });

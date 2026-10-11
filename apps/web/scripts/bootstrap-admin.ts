@@ -11,8 +11,8 @@ async function main() {
   delete process.env.ADMIN_BOOTSTRAP_EMAIL;
   delete process.env.ADMIN_BOOTSTRAP_PASSWORD;
 
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254 || password.length < 16 || password.length > 128) {
-    console.error("Admin bootstrap requires a valid ADMIN_BOOTSTRAP_EMAIL and a 16–128 character ADMIN_BOOTSTRAP_PASSWORD.");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254 || password.length < 8 || password.length > 128) {
+    console.error("Admin bootstrap requires a valid ADMIN_BOOTSTRAP_EMAIL and a 8–128 character ADMIN_BOOTSTRAP_PASSWORD.");
     process.exitCode = 1;
     return;
   }

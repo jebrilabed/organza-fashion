@@ -58,6 +58,11 @@ enum PaymentStatus {
   PARTIALLY_REFUNDED
 }
 
+enum PaymentMethod {
+  CASH_ON_DELIVERY
+  BANK_TRANSFER
+}
+
 enum NotificationStatus {
   PENDING
   PROCESSING
@@ -314,6 +319,7 @@ model Order {
   customerId      String?
   status          OrderStatus   @default(PENDING)
   paymentStatus   PaymentStatus @default(UNPAID)
+  paymentMethod   PaymentMethod @default(CASH_ON_DELIVERY)
   contactName     String
   contactEmail    String?
   contactPhone    String
@@ -331,6 +337,7 @@ model Order {
   customer      Customer?            @relation(fields: [customerId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   items         OrderItem[]
   notifications NotificationOutbox[]
+  paymentReceipt PaymentReceipt?
 
   @@index([status, createdAt])
   @@index([paymentStatus, createdAt])
@@ -338,6 +345,17 @@ model Order {
   @@index([customerId, createdAt])
   @@index([userId, createdAt])
   @@map("orders")
+}
+
+model PaymentReceipt {
+  orderId   String   @id
+  mimeType  String
+  data      Bytes
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("payment_receipts")
 }
 
 model OrderItem {

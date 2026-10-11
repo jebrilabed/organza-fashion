@@ -15,10 +15,11 @@ type LoginPageProps = {
   params: Promise<{ locale: string }>;
 };
 
-export default async function LoginPage({ params, searchParams }: LoginPageProps & { searchParams: Promise<{ registered?: string }> }) {
+export default async function LoginPage({ params, searchParams }: LoginPageProps & { searchParams: Promise<{ registered?: string; next?: string }> }) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
-  const { registered } = await searchParams;
+  const { registered, next } = await searchParams;
+  const nextPath = next === "/ar/checkout" ? next : "";
 
   return (
     <main className="auth-page">
@@ -33,9 +34,9 @@ export default async function LoginPage({ params, searchParams }: LoginPageProps
               <h1 className="text-2xl font-semibold">تسجيل الدخول</h1>
               <p className="text-sm leading-7 text-muted">أدخلي بيانات حسابك للمتابعة في organza fashion.</p>
             </div>
-            <LoginForm />
+            <LoginForm nextPath={nextPath} />
             {registered === "1" && <ToastMessage message={phaseMessages.ar.registered} tone="success" />}
-            <p className="text-sm">{phaseMessages.ar.noAccount} <Link href="/ar/register" className="underline font-bold text-[var(--brand-primary)]">{phaseMessages.ar.registerTitle}</Link></p>
+            <p className="text-sm">{phaseMessages.ar.noAccount} <Link href={nextPath ? "/ar/register?next=%2Far%2Fcheckout" : "/ar/register"} className="underline font-bold text-[var(--brand-primary)]">{phaseMessages.ar.registerTitle}</Link></p>
           </Card>
         </div>
       </Container>

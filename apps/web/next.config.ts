@@ -3,6 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   agentRules: false,
+  experimental: { serverActions: { bodySizeLimit: "5mb" } },
   async headers() {
     const securityHeaders = [
       { key: "Content-Security-Policy", value: "base-uri 'self'; object-src 'none'; frame-ancestors 'none'" },

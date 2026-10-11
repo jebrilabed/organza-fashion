@@ -4,7 +4,7 @@ import { Badge, Card, Container } from "@/components/ui";
 import { OrderStatus } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db/prisma";
 import { formatMoney } from "@/lib/storefront/format";
-import { orderStatusLabel } from "@/lib/storefront/order-labels";
+import { orderStatusLabel, paymentMethodLabel, paymentStatusLabel } from "@/lib/storefront/order-labels";
 import { storefrontMessages as messages } from "@/lib/storefront/messages";
 import { getCurrentUser } from "@/lib/auth/authorization";
 import { CheckoutAttemptCleanup } from "@/components/storefront/checkout-attempt-cleanup";
@@ -25,6 +25,8 @@ export default async function OrderConfirmationPage({ params }: { params: Promis
       orderNumber: true,
       status: true,
       paymentStatus: true,
+      paymentMethod: true,
+      paymentReceipt: { select: { orderId: true } },
       createdAt: true,
       subtotal: true,
       shippingCost: true,
@@ -52,6 +54,10 @@ export default async function OrderConfirmationPage({ params }: { params: Promis
           {!order.userId && <p className="store-muted">{messages.ar.orderCreatedForGuest}</p>}
           <p>{messages.ar.orderDate}: {new Intl.DateTimeFormat("ar-SA", { dateStyle: "medium", timeStyle: "short" }).format(order.createdAt)}</p>
           <p>{messages.ar.orderStatus}: <Badge>{orderStatusLabel(order.status)}</Badge></p>
+          <p>{messages.ar.paymentStatus}: {paymentStatusLabel(order.paymentStatus)}</p>
+          <p>{messages.ar.paymentMethodLabel}: {paymentMethodLabel(order.paymentMethod)}</p>
+          {order.paymentReceipt && <Link href={`/api/orders/${encodeURIComponent(order.orderNumber)}/payment-receipt`} target="_blank">{messages.ar.paymentReceiptLink}</Link>}
+          {order.paymentMethod === "BANK_TRANSFER" && <p className="store-muted">{messages.ar.transferPendingReview}</p>}
           <p>{messages.ar.contactName}: {order.contactName}</p>
           {shippingAddress.address && <p>{messages.ar.addressInfo}: {shippingAddress.address}{shippingAddress.city ? `، ${shippingAddress.city}` : ""}</p>}
           <h2>{messages.ar.orderedItems}</h2>

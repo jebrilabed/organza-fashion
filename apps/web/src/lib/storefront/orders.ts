@@ -1,7 +1,7 @@
 import "server-only";
 
 import { randomBytes } from "node:crypto";
-import { CartStatus, Locale, OrderStatus, ProductStatus } from "@/generated/prisma/enums";
+import { CartStatus, Locale, OrderStatus, PaymentMethod, PaymentStatus, ProductStatus } from "@/generated/prisma/enums";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { storeCurrency } from "@/lib/phase7/validation.mjs";
@@ -9,10 +9,10 @@ import { canTransitionOrder } from "./order-workflow.mjs";
 import { checkoutCartBinding, checkoutQuoteMatches } from "./checkout-security.mjs";
 import { calculateCheckoutAmounts } from "./checkout-pricing.mjs";
 import { buildOrderNotificationEvent, getOrderNotificationEventType } from "@/lib/notifications/order-events.mjs";
-import { findOwnedCustomerAddress } from "./address-ownership.mjs";
+import { getBankTransferDetails } from "./payment-settings";
 
 export class StorefrontOperationError extends Error {
-  constructor(readonly reason: "empty-cart" | "stock-changed" | "invalid-cart" | "cart-changed" | "invalid-checkout-attempt" | "invalid-transition" | "missing-sku" | "already-cancelled" | "restock-unavailable" | "currency-not-configured" | "store-inactive" | "address-unavailable") {
+  constructor(readonly reason: "empty-cart" | "stock-changed" | "invalid-cart" | "cart-changed" | "invalid-checkout-attempt" | "invalid-transition" | "missing-sku" | "already-cancelled" | "restock-unavailable" | "currency-not-configured" | "store-inactive" | "address-unavailable" | "invalid-payment") {
     super(reason);
     this.name = "StorefrontOperationError";
   }
@@ -46,22 +46,26 @@ export async function createOrderFromCart({
   guestTokenHash,
   userId,
   contactName,
+  contactEmail,
   contactPhone,
   address,
   city,
   customerNote,
-  addressId,
+  paymentMethod,
+  paymentReceipt,
   idempotencyKey,
   quote,
 }: {
   guestTokenHash: string | null;
   userId: string | null;
   contactName: string;
+  contactEmail: string;
   contactPhone: string;
   address: string;
   city: string;
   customerNote: string;
-  addressId?: string;
+  paymentMethod: PaymentMethod;
+  paymentReceipt: { mimeType: string; data: Uint8Array } | null;
   idempotencyKey: string;
   quote: {
     cartBinding: string;
@@ -219,19 +223,16 @@ export async function createOrderFromCart({
       throw new StorefrontOperationError("cart-changed");
     }
 
-    const settings = await tx.storeSettings.findUnique({ where: { id: "singleton" }, select: { isActive: true } });
+    const settings = await tx.storeSettings.findUnique({ where: { id: "singleton" }, select: { isActive: true, configuration: true } });
     if (settings?.isActive === false) throw new StorefrontOperationError("store-inactive");
     const currency = storeCurrency;
     if (quote.currency !== currency) throw new StorefrontOperationError("cart-changed");
-    if (addressId && !userId) throw new StorefrontOperationError("address-unavailable");
-    const savedAddress = addressId ? await findOwnedCustomerAddress(tx, addressId, userId!) : null;
-    if (addressId && !savedAddress) throw new StorefrontOperationError("address-unavailable");
-    const finalContactName = savedAddress?.fullName ?? contactName;
-    const finalContactPhone = savedAddress?.phone ?? contactPhone;
-    const shippingAddress = savedAddress
-      ? { address: savedAddress.addressLine, city: savedAddress.city, postalCode: savedAddress.postalCode, notes: savedAddress.notes }
-      : { address, city };
-    const customer = userId ? await tx.customer.findUnique({ where: { userId }, select: { id: true, email: true } }) : null;
+    if ((paymentMethod === PaymentMethod.BANK_TRANSFER) !== Boolean(paymentReceipt) ||
+      (paymentMethod === PaymentMethod.BANK_TRANSFER && !getBankTransferDetails(settings?.configuration))) {
+      throw new StorefrontOperationError("invalid-payment");
+    }
+    const shippingAddress = { address, city };
+    const customer = userId ? await tx.customer.findUnique({ where: { userId }, select: { id: true } }) : null;
 
     for (const item of freshItems) {
       const changed = await tx.productSku.updateMany({
@@ -249,10 +250,11 @@ export async function createOrderFromCart({
         userId,
         customerId: customer?.id ?? null,
         status: OrderStatus.PENDING,
-        paymentStatus: "UNPAID",
-        contactName: finalContactName,
-        contactPhone: finalContactPhone,
-        contactEmail: customer?.email ?? null,
+        paymentStatus: paymentMethod === PaymentMethod.BANK_TRANSFER ? PaymentStatus.PENDING : PaymentStatus.UNPAID,
+        paymentMethod,
+        contactName,
+        contactPhone,
+        contactEmail,
         shippingAddress,
         customerNote: customerNote || null,
         currency,
@@ -260,14 +262,15 @@ export async function createOrderFromCart({
         shippingCost,
         total,
         items: { create: orderItems },
+        ...(paymentReceipt ? { paymentReceipt: { create: { mimeType: paymentReceipt.mimeType, data: Buffer.from(paymentReceipt.data) } } } : {}),
       },
       select: { id: true, orderNumber: true, status: true, createdAt: true, total: true, currency: true },
     });
 
     const createdNotification = buildOrderNotificationEvent("ORDER_CREATED", {
       ...order,
-      contactName: finalContactName,
-      contactPhone: finalContactPhone,
+      contactName,
+      contactPhone,
     });
     if (createdNotification) await tx.notificationOutbox.create({ data: createdNotification });
 

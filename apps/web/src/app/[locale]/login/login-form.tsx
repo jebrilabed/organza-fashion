@@ -5,11 +5,12 @@ import { Button, Input } from "@/components/ui";
 import { ToastMessage } from "@/components/ui/toast";
 import { loginAction } from "./actions";
 
-export function LoginForm() {
+export function LoginForm({ nextPath = "" }: { nextPath?: string }) {
   const [state, action, pending] = useActionState(loginAction, { error: null });
 
   return (
     <form action={action} className="flex flex-col gap-5">
+      {nextPath && <input name="next" type="hidden" value={nextPath} />}
       <Input
         autoComplete="username"
         dir="ltr"

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Card, Container } from "@/components/ui";
 import { CheckoutForm } from "@/components/storefront/checkout-form";
 import { CheckoutRecovery } from "@/components/storefront/checkout-recovery";
@@ -13,9 +13,8 @@ import { getCurrentUser } from "@/lib/auth/authorization";
 import { prisma } from "@/lib/db/prisma";
 import { getStoreCurrency } from "@/lib/storefront/orders";
 import { checkoutOwnerBinding, createCheckoutAttemptToken } from "@/lib/storefront/checkout-security.mjs";
-import { readCartTokenHash } from "@/lib/storefront/cart";
 import { storefrontMessages as messages } from "@/lib/storefront/messages";
-import { phase7Messages as phase7 } from "@/lib/phase7/messages";
+import { getBankTransferDetails } from "@/lib/storefront/payment-settings";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
@@ -26,23 +25,21 @@ export default async function CheckoutPage({ params }: { params: Promise<{ local
     getCartSnapshot(),
     getStoreCurrency(),
     getCurrentUser(),
-    prisma.storeSettings.findUnique({ where: { id: "singleton" }, select: { isActive: true } }),
+    prisma.storeSettings.findUnique({ where: { id: "singleton" }, select: { isActive: true, configuration: true } }),
   ]);
   const userId = user?.role === "CUSTOMER" ? user.id : null;
-  const [addresses, customer, guestTokenHash] = await Promise.all([
-    userId ? prisma.customerAddress.findMany({ where: { userId }, orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }] }) : Promise.resolve([]),
+  const [defaultAddress, customer] = await Promise.all([
+    userId ? prisma.customerAddress.findFirst({ where: { userId, isDefault: true } }) : Promise.resolve(null),
     userId ? prisma.customer.findUnique({ where: { userId }, select: { phone: true } }) : Promise.resolve(null),
-    userId ? Promise.resolve(null) : readCartTokenHash(),
   ]);
+  if (user?.role === "ADMIN") redirect("/admin");
   const items = cart?.items ?? [];
   const available = items.length > 0 && items.every(isCartLineAvailable) && !!currency && settings?.isActive !== false;
   const subtotal = items.reduce((sum, item) => sum.add(item.sku.price.mul(item.quantity)), new Prisma.Decimal(0));
   const shippingCost = new Prisma.Decimal(0);
   const total = subtotal.add(shippingCost);
   const secret = process.env.AUTH_SECRET ?? "";
-  const ownerBinding = userId
-    ? checkoutOwnerBinding(secret, "customer", userId)
-    : guestTokenHash ? checkoutOwnerBinding(secret, "guest", guestTokenHash) : null;
+  const ownerBinding = userId ? checkoutOwnerBinding(secret, "customer", userId) : null;
   const checkoutAttempt = available && cart && currency && ownerBinding
     ? createCheckoutAttemptToken({
         secret,
@@ -52,14 +49,19 @@ export default async function CheckoutPage({ params }: { params: Promise<{ local
         items: items.map((item) => ({ skuId: item.sku.id, quantity: item.quantity, unitPrice: item.sku.price.toFixed(2) })),
       })
     : null;
-  const canSubmit = available && checkoutAttempt !== null;
-  const defaultAddress = addresses.find((address) => address.isDefault);
+  const canSubmit = userId !== null && available && checkoutAttempt !== null;
+  const bankTransfer = getBankTransferDetails(settings?.configuration);
 
   return (
     <main className="store-main">
       <Container>
         <header className="store-page-heading"><h1>{messages.ar.checkoutTitle}</h1></header>
-        {!canSubmit ? (
+        {!userId ? (
+          <Card className="mx-auto flex max-w-lg flex-col gap-4 p-6">
+            <h2>{messages.ar.loginToOrder}</h2>
+            <div className="flex flex-wrap gap-4"><Link className="underline" href="/ar/login?next=%2Far%2Fcheckout">{messages.ar.login}</Link><Link className="underline" href="/ar/register?next=%2Far%2Fcheckout">{messages.ar.register}</Link></div>
+          </Card>
+        ) : !canSubmit ? (
           <div className="ui-state">
             <span className="ui-state__symbol" aria-hidden="true">◇</span>
             {!items.length && <CheckoutRecovery />}
@@ -82,17 +84,18 @@ export default async function CheckoutPage({ params }: { params: Promise<{ local
               <p className="store-summary__row"><span>{messages.ar.shippingCost}</span><strong>{formatMoney(shippingCost, currency)}</strong></p>
               <p className="store-summary__row"><span>{messages.ar.total}</span><strong>{formatMoney(total, currency)}</strong></p>
               <p className="store-muted">{messages.ar.shippingUnconfigured}</p>
-              <p className="store-muted">{messages.ar.paymentUnpaidNotice}</p>
             </Card>
             <Card>
               <CheckoutForm
-                addresses={addresses.map((address) => ({ id: address.id, label: `${address.fullName} — ${address.city}${address.isDefault ? ` (${phase7.ar.defaultLabel})` : ""}` }))}
-                defaultAddressId={defaultAddress?.id ?? ""}
                 checkoutToken={checkoutAttempt.token}
                 quoteFingerprint={checkoutAttempt.fingerprint}
                 checkoutExpiresAt={checkoutAttempt.expiresAt}
                 contactName={defaultAddress?.fullName ?? user?.name ?? ""}
+                contactEmail={user?.email ?? ""}
                 contactPhone={defaultAddress?.phone ?? customer?.phone ?? ""}
+                address={defaultAddress?.addressLine ?? ""}
+                city={defaultAddress?.city ?? ""}
+                bankTransfer={bankTransfer}
               />
             </Card>
           </div>

@@ -39,7 +39,7 @@ export default async function CategoriesPage({ searchParams }: CategoriesPagePro
       <header className="admin-page__header"><div><h1>{messages.ar.categories}</h1><p>{total} {messages.ar.categories}</p></div><Link className="ui-button ui-button--primary" href="/admin/categories/new">{messages.ar.addCategory}</Link></header>
       <Card><form className="admin-toolbar" method="get"><Input name="q" type="search" label={messages.ar.categorySearch} defaultValue={query} /><button className="ui-button ui-button--outline" type="submit">{messages.ar.applyFilter}</button></form></Card>
       {categories.length ? <>
-        <div className="ui-table-wrap"><table className="ui-table admin-category-table">
+        <div className="ui-table-wrap admin-category-table-wrap"><table className="ui-table admin-category-table">
           <colgroup><col /><col /><col /><col /><col /></colgroup>
           <thead><tr><th>{messages.ar.categoryName}</th><th>{messages.ar.categoryDescription}</th><th>{messages.ar.status}</th><th>{messages.ar.productCount}</th><th>{messages.ar.actions}</th></tr></thead>
           <tbody>{categories.map((category) => {
@@ -48,11 +48,11 @@ export default async function CategoriesPage({ searchParams }: CategoriesPagePro
             const blocked = category._count.products > 0 || category._count.children > 0;
             const blockedText = category._count.products > 0 ? messages.ar.categoryHasProducts : messages.ar.categoryHasChildren;
             return <tr key={category.id}>
-              <td><Link href={`/admin/categories/${category.id}`}>{name}</Link></td>
-              <td><div className="admin-category-description">{translation?.description || "—"}</div></td>
-              <td><Badge variant={category.status === "ACTIVE" ? "success" : "warning"}>{category.status === "ACTIVE" ? messages.ar.active : messages.ar.archived}</Badge></td>
-              <td>{category._count.products}</td>
-              <td><div className="admin-row-actions"><Link className="ui-button ui-button--ghost ui-button--small" href={`/admin/categories/${category.id}`}>{messages.ar.edit}</Link>
+              <td data-label={messages.ar.categoryName}><Link href={`/admin/categories/${category.id}`}>{name}</Link></td>
+              <td data-label={messages.ar.categoryDescription}><div className="admin-category-description">{translation?.description || "—"}</div></td>
+              <td data-label={messages.ar.status}><Badge variant={category.status === "ACTIVE" ? "success" : "warning"}>{category.status === "ACTIVE" ? messages.ar.active : messages.ar.archived}</Badge></td>
+              <td data-label={messages.ar.productCount}>{category._count.products}</td>
+              <td data-label={messages.ar.actions}><div className="admin-row-actions"><Link className="ui-button ui-button--ghost ui-button--small" href={`/admin/categories/${category.id}`}>{messages.ar.edit}</Link>
                 {blocked ? <span className="admin-field-error">{blockedText}</span> : <ActionForm action={deleteCategory} fields={{ categoryId: category.id }} label={messages.ar.delete} confirmMessage={messages.ar.deleteCategoryConfirm} variant="ghost" />}
               </div></td>
             </tr>;
