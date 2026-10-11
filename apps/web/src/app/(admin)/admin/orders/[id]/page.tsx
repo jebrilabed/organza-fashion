@@ -36,6 +36,7 @@ export default async function AdminOrderDetails({ params, searchParams }: {
       customerNote: true,
       currency: true,
       subtotal: true,
+      shippingCost: true,
       total: true,
       createdAt: true,
       updatedAt: true,
@@ -54,7 +55,7 @@ export default async function AdminOrderDetails({ params, searchParams }: {
       <ToastMessage message={notice === "transition" ? messages.ar.invalidTransition : notice === "missingSku" ? messages.ar.missingSkuRestore : notice === "alreadyCancelled" ? messages.ar.alreadyCancelled : notice === "restockUnavailable" ? messages.ar.restockUnavailable : notice === "reserveUnavailable" ? messages.ar.reserveUnavailable : notice === "paymentInvalid" ? messages.ar.paymentStatusInvalid : notice === "paymentUpdateFailed" ? messages.ar.paymentStatusUpdateFailed : notice === "deleteMissingSku" ? adminText.orderDeleteMissingSku : notice === "deleteRestockUnavailable" ? adminText.orderDeleteRestockUnavailable : notice === "deleteNotificationProcessing" ? adminText.orderDeleteNotificationProcessing : notice === "deleteFailed" ? adminText.orderDeleteFailed : notice === "notFound" ? messages.ar.orderNotFound : notice && notice !== "updated" && notice !== "paymentUpdated" ? messages.ar.databaseUnavailable : undefined} tone="error" />
       <div className="store-admin-order-info">
         <Card><h2>{messages.ar.customer}</h2><p>{order.contactName}</p><p dir="ltr">{order.contactPhone}</p>{order.contactEmail && <p dir="ltr">{order.contactEmail}</p>}</Card>
-        <Card><h2>{messages.ar.addressInfo}</h2><p>{address.address}</p><p>{address.city}</p></Card>
+        <Card><h2>{messages.ar.addressInfo}</h2><p>{address.deliveryZoneName && <>{messages.ar.deliveryZoneLabel}: {address.deliveryZoneName}<br /></>}</p><p>{address.address}</p><p>{address.city}</p></Card>
         <Card><h2>{messages.ar.adminOrderDetails}</h2><p>{messages.ar.orderDate}: {new Intl.DateTimeFormat("ar-SA", { dateStyle: "medium", timeStyle: "short" }).format(order.createdAt)}</p><p>{messages.ar.orderDateUpdated}: {new Intl.DateTimeFormat("ar-SA", { dateStyle: "medium", timeStyle: "short" }).format(order.updatedAt)}</p><p>{messages.ar.orderStatus}: {orderStatusLabel(order.status)}</p><p>{messages.ar.paymentStatus}: {paymentStatusLabel(order.paymentStatus)}</p><p>{messages.ar.paymentMethodLabel}: {paymentMethodLabel(order.paymentMethod)}</p>{order.paymentReceipt && <Link href={`/api/orders/${encodeURIComponent(order.orderNumber)}/payment-receipt`} target="_blank">{messages.ar.paymentReceiptLink}</Link>}</Card>
         <Card><h2>{messages.ar.customerNote}</h2><p>{order.customerNote || messages.ar.noNotes}</p></Card>
       </div>
@@ -73,6 +74,7 @@ export default async function AdminOrderDetails({ params, searchParams }: {
         </div>
         <div className="admin-order-totals">
           <p className="admin-order-total"><span>{messages.ar.subtotal}</span><strong>{formatMoney(order.subtotal, order.currency)}</strong></p>
+          <p className="admin-order-total"><span>{messages.ar.shippingCost}</span><strong>{formatMoney(order.shippingCost, order.currency)}</strong></p>
           <p className="admin-order-total admin-order-total--grand"><span>{messages.ar.total}</span><strong>{formatMoney(order.total, order.currency)}</strong></p>
         </div>
       </Card>

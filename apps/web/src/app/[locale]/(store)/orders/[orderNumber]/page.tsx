@@ -44,6 +44,7 @@ export default async function MyOrderDetails({ params }: { params: Promise<{ ord
           <p>{messages.ar.paymentStatus}: {paymentStatusLabel(order.paymentStatus)}</p>
           <p>{messages.ar.paymentMethodLabel}: {paymentMethodLabel(order.paymentMethod)}</p>
           {order.paymentReceipt && <Link href={`/api/orders/${encodeURIComponent(order.orderNumber)}/payment-receipt`} target="_blank">{messages.ar.paymentReceiptLink}</Link>}
+          {shippingAddress.deliveryZoneName && <p>{messages.ar.deliveryZoneLabel}: {shippingAddress.deliveryZoneName}</p>}
           {shippingAddress.address && <p>{messages.ar.addressInfo}: {shippingAddress.address}{shippingAddress.city ? `، ${shippingAddress.city}` : ""}</p>}
           <h2>{messages.ar.orderedItems}</h2>
           <div className="store-order-items-table-wrap" role="region" aria-label={messages.ar.orderedItems} tabIndex={0}>
@@ -58,7 +59,7 @@ export default async function MyOrderDetails({ params }: { params: Promise<{ ord
             </table>
           </div>
           <p className="store-summary__row"><span>{messages.ar.subtotal}</span><strong>{formatMoney(order.subtotal, order.currency)}</strong></p>
-          <p className="store-summary__row"><span>{messages.ar.shippingCost}</span><strong>{order.shippingCost.isZero() ? messages.ar.shippingFree : formatMoney(order.shippingCost, order.currency)}</strong></p>
+          <p className="store-summary__row"><span>{messages.ar.shippingCost}</span><strong>{formatMoney(order.shippingCost, order.currency)}</strong></p>
           <p className="store-summary__row"><span>{messages.ar.total}</span><strong>{formatMoney(order.total, order.currency)}</strong></p>
         </Card>
       </Container>

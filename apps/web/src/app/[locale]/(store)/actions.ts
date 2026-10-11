@@ -170,12 +170,11 @@ export async function clearCartAction() {
 export type CheckoutActionState = {
   error?: string;
   fieldErrors?: Record<string, string>;
-  values?: { contactName: string; contactEmail: string; contactPhone: string; address: string; city: string; customerNote: string };
+  values?: { contactName: string; contactEmail: string; contactPhone: string; address: string; city: string; deliveryZoneName: string; customerNote: string };
 };
 
 export async function submitCheckoutAction(_previousState: CheckoutActionState, formData: FormData): Promise<CheckoutActionState> {
   const user = await getCurrentUser();
-  if (user?.role !== "CUSTOMER") redirect(user ? "/admin" : "/ar/login?next=%2Far%2Fcheckout");
   const parsed = parseCheckoutInput(formData);
   if (!parsed.ok) return { fieldErrors: parsed.errors, values: parsed.values };
   const checkoutValues = parsed.value;
@@ -197,12 +196,12 @@ export async function submitCheckoutAction(_previousState: CheckoutActionState, 
   }
   let checkoutStage = "session";
   try {
-    const userId = user.id;
-    const guestTokenHash = null;
+    const userId = user?.role === "CUSTOMER" ? user.id : null;
+    const guestTokenHash = userId ? null : await readCartTokenHash();
     const secret = process.env.AUTH_SECRET ?? "";
     const ownerBinding = userId
       ? checkoutOwnerBinding(secret, "customer", userId)
-      : checkoutOwnerBinding(secret, "guest", guestTokenHash!);
+      : guestTokenHash ? checkoutOwnerBinding(secret, "guest", guestTokenHash) : null;
     const checkoutAttempt = ownerBinding
       ? verifyCheckoutAttemptToken(textField(formData, "checkoutToken"), secret, ownerBinding)
       : null;
@@ -232,6 +231,7 @@ export async function submitCheckoutAction(_previousState: CheckoutActionState, 
       if (error.reason === "currency-not-configured") return { error: messages.ar.currencyNotConfigured, values: checkoutValues };
       if (error.reason === "store-inactive") return { error: messages.ar.storeInactive, values: checkoutValues };
       if (error.reason === "address-unavailable") return { error: messages.ar.addressUnavailable, values: checkoutValues };
+      if (error.reason === "invalid-delivery-zone") return { fieldErrors: { deliveryZoneName: "validationDeliveryZone" }, values: checkoutValues };
       if (error.reason === "invalid-payment") return { fieldErrors: { paymentMethod: "validationPaymentMethod" }, values: checkoutValues };
     }
     // Next redirects are thrown control-flow errors and must pass through untouched.

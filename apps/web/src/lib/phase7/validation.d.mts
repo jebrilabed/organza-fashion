@@ -4,7 +4,10 @@ export function parseRegistration(data: FormData): { ok: true; value: { name: st
 export function parseProfile(data: FormData): { ok: true; value: string } | { ok: false };
 export type ParsedAddress = { fullName: string; phone: string; addressLine: string; city: string; postalCode: string | null; notes: string | null; isDefault: boolean };
 export function parseAddress(data: FormData): { ok: true; value: ParsedAddress } | { ok: false; errors: Record<string, string> };
-export type ParsedStoreSettings = { storeName: string; description: string | null; currency: string; contactPhone: string | null; whatsappNumber: string | null; bankName: string; bankAccountName: string; bankAccountNumber: string; bankIban: string; email: string | null; address: string | null; defaultLocale: string; isActive: boolean };
+export type DeliveryZone = { name: string; price: string };
+export function parseDeliveryZones(data: FormData): { ok: true; value: DeliveryZone[] } | { ok: false };
+export function readDeliveryZones(value: unknown): DeliveryZone[];
+export type ParsedStoreSettings = { storeName: string; description: string | null; currency: string; contactPhone: string | null; whatsappNumber: string | null; bankName: string; bankAccountName: string; bankAccountNumber: string; bankIban: string; email: string | null; address: string | null; defaultLocale: string; isActive: boolean; deliveryZones: DeliveryZone[] };
 export function parseStoreSettings(data: FormData): { ok: true; value: ParsedStoreSettings } | { ok: false; errors: Record<string, string> };
 export type ParsedSku = { id: string; skuCode: string; price: string; stockQuantity: number; variantOptions: Record<string, string | number | boolean>; isActive: boolean };
 export function parseSku(data: FormData): { ok: true; value: ParsedSku } | { ok: false; errors: Record<string, string> };

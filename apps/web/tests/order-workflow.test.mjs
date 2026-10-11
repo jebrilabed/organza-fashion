@@ -10,10 +10,13 @@ import {
 function validForm(overrides = {}) {
   const form = new FormData();
   form.set("contactName", "  سارة  ");
+  form.set("contactEmail", " SARA@example.com ");
   form.set("contactPhone", "+966 50 123 4567");
   form.set("address", "شارع النخيل ١");
   form.set("city", "الرياض");
+  form.set("deliveryZoneName", "الرياض");
   form.set("customerNote", "اتصل قبل الوصول");
+  form.set("paymentMethod", "CASH_ON_DELIVERY");
   for (const [key, value] of Object.entries(overrides)) form.set(key, value);
   return form;
 }
@@ -23,11 +26,18 @@ test("checkout trims contact details and accepts a neutral international phone f
   assert.equal(parsed.ok, true);
   assert.deepEqual(parsed.value, {
     contactName: "سارة",
+    contactEmail: "sara@example.com",
     contactPhone: "+966 50 123 4567",
     address: "شارع النخيل ١",
     city: "الرياض",
+    deliveryZoneName: "الرياض",
     customerNote: "اتصل قبل الوصول",
+    paymentMethod: "CASH_ON_DELIVERY",
   });
+});
+
+test("checkout requires a delivery zone", () => {
+  assert.deepEqual(parseCheckoutInput(validForm({ deliveryZoneName: "" })).errors, { deliveryZoneName: "validationDeliveryZone" });
 });
 
 test("checkout rejects missing fields, invalid phones, long text, and file values", () => {

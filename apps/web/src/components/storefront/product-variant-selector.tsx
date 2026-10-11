@@ -54,7 +54,7 @@ export function ProductVariantSelector({
 
   const [selectedColor, setSelectedColor] = useState<string>("");
   const [selectedSize, setSelectedSize] = useState<string>("");
-  const [quantity, setQuantity] = useState<number>(1);
+  const [quantity, setQuantity] = useState("1");
   const [validationError, setValidationError] = useState<string | null>(null);
 
   // Determine selectable color options (must have at least one size/variant with stock > 0)
@@ -119,7 +119,13 @@ export function ProductVariantSelector({
       setValidationError(messages.ar.selectSize);
       return;
     }
-    if (!matchedSku || matchedSku.stockQuantity < quantity) {
+    const parsedQuantity = Number(quantity);
+    if (!Number.isSafeInteger(parsedQuantity) || parsedQuantity < 1) {
+      e.preventDefault();
+      setValidationError(messages.ar.validationQuantity);
+      return;
+    }
+    if (!matchedSku || matchedSku.stockQuantity < parsedQuantity) {
       e.preventDefault();
       setValidationError(messages.ar.outOfStock);
       return;
@@ -133,7 +139,8 @@ export function ProductVariantSelector({
       <form action={addToCartAction} className="store-form space-y-4">
         <input type="hidden" name="skuId" value={simpleSku.id} />
         <Input
-          defaultValue={1}
+          value={quantity}
+          onChange={(event) => setQuantity(event.target.value)}
           label={messages.ar.quantity}
           max={simpleSku.stockQuantity}
           min={1}
@@ -270,7 +277,7 @@ export function ProductVariantSelector({
       <div className="space-y-3 pt-2">
         <Input
           value={quantity}
-          onChange={(e) => setQuantity(Math.max(1, Number.parseInt(e.target.value || "1", 10)))}
+          onChange={(event) => setQuantity(event.target.value)}
           label={messages.ar.quantity}
           max={matchedSku ? Math.max(1, matchedSku.stockQuantity) : 1}
           min={1}

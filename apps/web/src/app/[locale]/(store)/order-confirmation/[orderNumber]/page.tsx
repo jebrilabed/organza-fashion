@@ -59,13 +59,14 @@ export default async function OrderConfirmationPage({ params }: { params: Promis
           {order.paymentReceipt && <Link href={`/api/orders/${encodeURIComponent(order.orderNumber)}/payment-receipt`} target="_blank">{messages.ar.paymentReceiptLink}</Link>}
           {order.paymentMethod === "BANK_TRANSFER" && <p className="store-muted">{messages.ar.transferPendingReview}</p>}
           <p>{messages.ar.contactName}: {order.contactName}</p>
+          {shippingAddress.deliveryZoneName && <p>{messages.ar.deliveryZoneLabel}: {shippingAddress.deliveryZoneName}</p>}
           {shippingAddress.address && <p>{messages.ar.addressInfo}: {shippingAddress.address}{shippingAddress.city ? `، ${shippingAddress.city}` : ""}</p>}
           <h2>{messages.ar.orderedItems}</h2>
           <ul className="store-checkout-list">
             {order.items.map((item) => <li key={item.id}><span>{item.productNameSnapshot} × {item.quantity}<div className="flex flex-col gap-1 text-sm text-slate-500"><VariantOptionsDisplay options={item.variantSnapshot} /><span>{formatMoney(item.unitPrice, order.currency)} × {item.quantity}</span></div></span><strong>{formatMoney(item.subtotal, order.currency)}</strong></li>)}
           </ul>
           <p className="store-summary__row"><span>{messages.ar.subtotal}</span><strong>{formatMoney(order.subtotal, order.currency)}</strong></p>
-          <p className="store-summary__row"><span>{messages.ar.shippingCost}</span><strong>{order.shippingCost.isZero() ? messages.ar.shippingFree : formatMoney(order.shippingCost, order.currency)}</strong></p>
+          <p className="store-summary__row"><span>{messages.ar.shippingCost}</span><strong>{formatMoney(order.shippingCost, order.currency)}</strong></p>
           <p className="store-summary__row"><span>{messages.ar.total}</span><strong>{formatMoney(order.total, order.currency)}</strong></p>
           {order.paymentStatus === "UNPAID" && <p className="store-muted">{messages.ar.paymentUnpaidNotice}</p>}
           <Link href="/ar">{messages.ar.continueShopping}</Link>

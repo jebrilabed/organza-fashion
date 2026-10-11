@@ -10,9 +10,10 @@ import { checkoutCartBinding, checkoutQuoteMatches } from "./checkout-security.m
 import { calculateCheckoutAmounts } from "./checkout-pricing.mjs";
 import { buildOrderNotificationEvent, getOrderNotificationEventType } from "@/lib/notifications/order-events.mjs";
 import { getBankTransferDetails } from "./payment-settings";
+import { readDeliveryZones } from "@/lib/phase7/validation.mjs";
 
 export class StorefrontOperationError extends Error {
-  constructor(readonly reason: "empty-cart" | "stock-changed" | "invalid-cart" | "cart-changed" | "invalid-checkout-attempt" | "invalid-transition" | "missing-sku" | "already-cancelled" | "restock-unavailable" | "stock-unavailable" | "currency-not-configured" | "store-inactive" | "address-unavailable" | "invalid-payment") {
+  constructor(readonly reason: "empty-cart" | "stock-changed" | "invalid-cart" | "cart-changed" | "invalid-checkout-attempt" | "invalid-transition" | "missing-sku" | "already-cancelled" | "restock-unavailable" | "stock-unavailable" | "currency-not-configured" | "store-inactive" | "address-unavailable" | "invalid-payment" | "invalid-delivery-zone") {
     super(reason);
     this.name = "StorefrontOperationError";
   }
@@ -50,6 +51,7 @@ export async function createOrderFromCart({
   contactPhone,
   address,
   city,
+  deliveryZoneName,
   customerNote,
   paymentMethod,
   paymentReceipt,
@@ -63,6 +65,7 @@ export async function createOrderFromCart({
   contactPhone: string;
   address: string;
   city: string;
+  deliveryZoneName: string;
   customerNote: string;
   paymentMethod: PaymentMethod;
   paymentReceipt: { mimeType: string; data: Uint8Array } | null;
@@ -186,7 +189,19 @@ export async function createOrderFromCart({
     });
     if (!freshItems.length) throw new StorefrontOperationError("empty-cart");
 
-    const amounts = calculateCheckoutAmounts(freshItems.map(({ sku, quantity }) => ({ unitPrice: sku.price.toFixed(2), quantity })));
+    const settings = await tx.storeSettings.findUnique({ where: { id: "singleton" }, select: { isActive: true, configuration: true, shippingSettings: true } });
+    if (settings?.isActive === false) throw new StorefrontOperationError("store-inactive");
+    const shippingSettings = settings?.shippingSettings;
+    const deliveryZoneData = shippingSettings && typeof shippingSettings === "object" && !Array.isArray(shippingSettings) && "deliveryZones" in shippingSettings
+      ? shippingSettings.deliveryZones
+      : null;
+    const deliveryZone = readDeliveryZones(deliveryZoneData).find((zone) => zone.name === deliveryZoneName);
+    if (!deliveryZone) throw new StorefrontOperationError("invalid-delivery-zone");
+
+    const amounts = calculateCheckoutAmounts(
+      freshItems.map(({ sku, quantity }) => ({ unitPrice: sku.price.toFixed(2), quantity })),
+      deliveryZone.price,
+    );
     if (!amounts) throw new StorefrontOperationError("invalid-cart");
     const subtotal = new Prisma.Decimal(amounts.subtotal);
     const shippingCost = new Prisma.Decimal(amounts.shipping);
@@ -223,15 +238,13 @@ export async function createOrderFromCart({
       throw new StorefrontOperationError("cart-changed");
     }
 
-    const settings = await tx.storeSettings.findUnique({ where: { id: "singleton" }, select: { isActive: true, configuration: true } });
-    if (settings?.isActive === false) throw new StorefrontOperationError("store-inactive");
     const currency = storeCurrency;
     if (quote.currency !== currency) throw new StorefrontOperationError("cart-changed");
     if ((paymentMethod === PaymentMethod.BANK_TRANSFER) !== Boolean(paymentReceipt) ||
       (paymentMethod === PaymentMethod.BANK_TRANSFER && !getBankTransferDetails(settings?.configuration))) {
       throw new StorefrontOperationError("invalid-payment");
     }
-    const shippingAddress = { address, city };
+    const shippingAddress = { address, city, deliveryZoneName: deliveryZone.name };
     const customer = userId ? await tx.customer.findUnique({ where: { userId }, select: { id: true } }) : null;
 
     for (const item of freshItems) {

@@ -64,7 +64,7 @@ test("checkout quote detects changed prices, quantities, and SKU lines", () => {
   assert.equal(checkoutQuoteMatches(verified.quote.items, [{ ...quoteItems[0], quantity: 1 }, quoteItems[1]]), false);
 });
 
-test("checkout totals are decimal-safe and shipping is always free", () => {
+test("checkout totals add configured shipping with decimal-safe arithmetic", () => {
   assert.deepEqual(calculateCheckoutAmounts([
     { unitPrice: "0.10", quantity: 3 },
     { unitPrice: "0.20", quantity: 2 },
@@ -74,16 +74,26 @@ test("checkout totals are decimal-safe and shipping is always free", () => {
     shipping: "0.00",
     total: "0.70",
   });
-  assert.equal(calculateCheckoutAmounts([{ unitPrice: "99.99", quantity: 3 }], "5.00").total, "299.97");
+  assert.equal(calculateCheckoutAmounts([{ unitPrice: "99.99", quantity: 3 }], "5.00").total, "304.97");
+  assert.deepEqual(calculateCheckoutAmounts([{ unitPrice: "10.25", quantity: 1 }], "3.50"), {
+    lineSubtotals: ["10.25"],
+    subtotal: "10.25",
+    shipping: "3.50",
+    total: "13.75",
+  });
+  assert.equal(calculateCheckoutAmounts([{ unitPrice: "10.25", quantity: 1 }], "-1.00"), null);
 });
 
 test("checkout form parsing ignores client prices, totals, stock, and owner identifiers", () => {
   const form = new FormData();
   form.set("contactName", "سارة");
+  form.set("contactEmail", "sara@example.com");
   form.set("contactPhone", "+966 50 123 4567");
   form.set("address", "شارع النخيل");
   form.set("city", "الرياض");
+  form.set("deliveryZoneName", "الرياض");
   form.set("customerNote", "");
+  form.set("paymentMethod", "CASH_ON_DELIVERY");
   form.set("price", "0.01");
   form.set("total", "0.01");
   form.set("stock", "999999");

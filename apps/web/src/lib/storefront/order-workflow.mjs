@@ -37,6 +37,7 @@ export function parseCheckoutInput(formData) {
     contactPhone: readText("contactPhone"),
     address: readText("address"),
     city: readText("city"),
+    deliveryZoneName: readText("deliveryZoneName"),
     customerNote: readText("customerNote"),
   };
   const paymentMethod = readText("paymentMethod");
@@ -47,6 +48,7 @@ export function parseCheckoutInput(formData) {
   if (raw.contactPhone.length > 40 || digitCount < 8 || digitCount > 16 || !/^\+[1-9][()\d\s.-]+$/.test(raw.contactPhone)) errors.contactPhone = "validationPhone";
   if (!raw.address || raw.address.length > 500) errors.address = "validationAddress";
   if (!raw.city || raw.city.length > 120) errors.city = "validationCity";
+  if (!raw.deliveryZoneName || raw.deliveryZoneName.length > 120) errors.deliveryZoneName = "validationDeliveryZone";
   if (!["CASH_ON_DELIVERY", "BANK_TRANSFER"].includes(paymentMethod)) errors.paymentMethod = "validationPaymentMethod";
   if (paymentMethod === "BANK_TRANSFER") {
     const receipt = formData.get("paymentReceipt");

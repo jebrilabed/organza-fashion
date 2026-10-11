@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseAddress, parseImage, parseRegistration, parseSku, parseStoreSettings, supportedCurrencies } from "../src/lib/phase7/validation.mjs";
+import { parseAddress, parseDeliveryZones, parseImage, parseRegistration, parseSku, parseStoreSettings, readDeliveryZones, supportedCurrencies } from "../src/lib/phase7/validation.mjs";
 import { checkEnvironment } from "../src/lib/config/environment-readiness.mjs";
 import { parseCategoryInput, parseProductInput } from "../src/lib/admin/catalog-validation.mjs";
 
@@ -35,6 +35,31 @@ test("store settings always use Israeli shekels and Arabic locale", () => {
   assert.equal(parseStoreSettings(form({ ...base, currency: "BAD" })).value.currency, "ILS");
   assert.equal(parseStoreSettings(form({ ...base, currency: "ILS" })).value.currency, "ILS");
   assert.deepEqual(supportedCurrencies, ["SAR", "USD", "EUR", "ILS", "JOD"]);
+});
+
+test("delivery zones normalize prices and reject duplicate or invalid rows", () => {
+  const data = new FormData();
+  data.append("deliveryZoneName", " رام الله ");
+  data.append("deliveryZonePrice", "7.5");
+  data.append("deliveryZoneName", "القدس");
+  data.append("deliveryZonePrice", "0");
+  assert.deepEqual(parseDeliveryZones(data), {
+    ok: true,
+    value: [{ name: "رام الله", price: "7.50" }, { name: "القدس", price: "0.00" }],
+  });
+
+  const duplicate = new FormData();
+  duplicate.append("deliveryZoneName", "رام الله");
+  duplicate.append("deliveryZonePrice", "7");
+  duplicate.append("deliveryZoneName", " رام الله ");
+  duplicate.append("deliveryZonePrice", "8");
+  assert.equal(parseDeliveryZones(duplicate).ok, false);
+
+  const invalidPrice = new FormData();
+  invalidPrice.append("deliveryZoneName", "نابلس");
+  invalidPrice.append("deliveryZonePrice", "-1");
+  assert.equal(parseDeliveryZones(invalidPrice).ok, false);
+  assert.deepEqual(readDeliveryZones([{ name: "نابلس", price: "3.25" }, { name: "x", price: "bad" }]), []);
 });
 
 test("SKU validation blocks negative values and malformed variant JSON", () => {

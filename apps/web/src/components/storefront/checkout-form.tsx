@@ -10,7 +10,7 @@ import type { BankTransferDetails } from "@/lib/storefront/payment-settings";
 
 const initialState: CheckoutActionState = {};
 
-export function CheckoutForm({ checkoutToken, quoteFingerprint, checkoutExpiresAt, contactName, contactEmail, contactPhone, address, city, bankTransfer }: {
+export function CheckoutForm({ checkoutToken, quoteFingerprint, checkoutExpiresAt, contactName, contactEmail, contactPhone, address, city, bankTransfer, deliveryZones }: {
   checkoutToken: string;
   quoteFingerprint: string;
   checkoutExpiresAt: number;
@@ -20,10 +20,13 @@ export function CheckoutForm({ checkoutToken, quoteFingerprint, checkoutExpiresA
   address: string;
   city: string;
   bankTransfer: BankTransferDetails | null;
+  deliveryZones: { name: string; price: string; priceLabel: string; totalLabel: string }[];
 }) {
   const [activeCheckoutToken, setActiveCheckoutToken] = useState(checkoutToken);
   const [paymentMethod, setPaymentMethod] = useState("CASH_ON_DELIVERY");
+  const [deliveryZoneName, setDeliveryZoneName] = useState(deliveryZones[0]?.name ?? "");
   const [state, action, pending] = useActionState(submitCheckoutAction, initialState);
+  const selectedDeliveryZone = deliveryZones.find((zone) => zone.name === deliveryZoneName);
   useEffect(() => {
     const storageKey = "shimo:checkout-attempt";
     try {
@@ -52,7 +55,18 @@ export function CheckoutForm({ checkoutToken, quoteFingerprint, checkoutExpiresA
       <Input autoComplete="name" defaultValue={values?.contactName ?? contactName} label={messages.ar.contactName} maxLength={200} name="contactName" required error={fieldError("contactName")} />
       <Input autoComplete="email" dir="ltr" defaultValue={values?.contactEmail ?? contactEmail} label={messages.ar.contactEmail} maxLength={254} name="contactEmail" required type="email" error={fieldError("contactEmail")} />
       <Input autoComplete="tel" dir="ltr" defaultValue={values?.contactPhone ?? contactPhone} hint={messages.ar.whatsappCountryCodeHint} label={messages.ar.phone} maxLength={40} name="contactPhone" placeholder="+9665XXXXXXXX" required error={fieldError("contactPhone")} />
-      <Input autoComplete="street-address" defaultValue={values?.address ?? address} label={messages.ar.address} maxLength={500} name="address" required error={fieldError("address")} />
+      <label className="ui-field">
+        <span className="ui-field__label">{messages.ar.deliveryZone}</span>
+        <select className="ui-field__control" name="deliveryZoneName" required value={deliveryZoneName} onChange={(event) => setDeliveryZoneName(event.target.value)}>
+          {deliveryZones.map((zone) => <option key={zone.name} value={zone.name}>{zone.name} ({zone.priceLabel})</option>)}
+        </select>
+      </label>
+      {fieldError("deliveryZoneName") && <p className="ui-field__error">{fieldError("deliveryZoneName")}</p>}
+      {selectedDeliveryZone && <div>
+        <p className="store-summary__row"><span>{messages.ar.shippingCost}</span><strong>{selectedDeliveryZone.priceLabel}</strong></p>
+        <p className="store-summary__row"><span>{messages.ar.total}</span><strong>{selectedDeliveryZone.totalLabel}</strong></p>
+      </div>}
+      <Input autoComplete="street-address" defaultValue={values?.address ?? address} label={messages.ar.detailedAddress} maxLength={500} name="address" required error={fieldError("address")} />
       <Input autoComplete="address-level2" defaultValue={values?.city ?? city} label={messages.ar.city} maxLength={120} name="city" required error={fieldError("city")} />
       <Textarea defaultValue={values?.customerNote} label={messages.ar.note} maxLength={2000} name="customerNote" rows={4} error={fieldError("customerNote")} />
       <label className="ui-field">

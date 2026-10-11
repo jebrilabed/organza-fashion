@@ -103,11 +103,13 @@ price is never used to render historical orders. The existing cryptographically
 random `orderNumber` field provides the public confirmation reference. Order number,
 items, stock decrements, and cart conversion/clearing commit together.
 
-There is no shipping-rate policy in the current store-settings UI, so shipping is
-calculated as zero and shown in checkout and confirmation. The Order model records
-`shippingCost`, ready for a later configured policy. There is no payment gateway;
-orders remain UNPAID. `Order.total` is the Decimal-safe server-calculated subtotal
-plus shipping. The store currency comes from `StoreSettings.currency`. If it is absent or unsupported,
+Admins configure named delivery zones and their prices in store settings. Checkout
+lists those zones, displays the selected shipping charge and total, and requires a
+zone before placing an order. The server resolves the submitted zone against current
+settings, calculates shipping with Decimal arithmetic, and snapshots the zone name
+into the order address and its price into `Order.shippingCost`. There is no payment
+gateway; orders remain UNPAID. `Order.total` is the Decimal-safe server-calculated
+subtotal plus shipping. The store currency comes from `StoreSettings.currency`. If it is absent or unsupported,
 prices are marked unavailable and checkout/order creation is blocked; the application
 does not substitute a production SAR value. Configure the store setting before accepting
 orders. Currency is stored on every order

@@ -2,6 +2,50 @@ const text = (value) => typeof value === "string" ? value.trim() : "";
 export const supportedCurrencies = ["SAR", "USD", "EUR", "ILS", "JOD"];
 export const storeCurrency = "ILS";
 
+const deliveryMoneyPattern = /^(?:0|[1-9]\d{0,9})(?:\.\d{1,2})?$/;
+
+function canonicalDeliveryPrice(value) {
+  if (typeof value !== "string") return null;
+  const price = value.trim();
+  if (!deliveryMoneyPattern.test(price)) return null;
+  const [whole, fraction = ""] = price.split(".");
+  return `${whole}.${fraction.padEnd(2, "0")}`;
+}
+
+function uniqueDeliveryZones(zones) {
+  const names = new Set();
+  const normalized = [];
+  for (const zone of zones) {
+    const name = typeof zone?.name === "string" ? zone.name.trim() : "";
+    const price = canonicalDeliveryPrice(typeof zone?.price === "string" ? zone.price : "");
+    const key = name.toLocaleLowerCase();
+    if (!name || name.length > 120 || !price || names.has(key)) return null;
+    names.add(key);
+    normalized.push({ name, price });
+  }
+  return normalized;
+}
+
+export function parseDeliveryZones(data) {
+  const names = data.getAll("deliveryZoneName");
+  const prices = data.getAll("deliveryZonePrice");
+  if (names.length !== prices.length || names.length > 50) return { ok: false };
+  const zones = [];
+  for (let index = 0; index < names.length; index += 1) {
+    const name = text(names[index]);
+    const price = text(prices[index]);
+    if (!name && !price) continue;
+    zones.push({ name, price });
+  }
+  const normalized = uniqueDeliveryZones(zones);
+  return normalized ? { ok: true, value: normalized } : { ok: false };
+}
+
+export function readDeliveryZones(value) {
+  if (!Array.isArray(value) || value.length > 50) return [];
+  return uniqueDeliveryZones(value) ?? [];
+}
+
 export function parseRegistration(data) {
   const name = text(data.get("name"));
   const email = text(data.get("email")).toLowerCase();
@@ -49,6 +93,7 @@ export function parseAddress(data) {
 }
 
 export function parseStoreSettings(data) {
+  const parsedDeliveryZones = parseDeliveryZones(data);
   const value = {
     storeName: text(data.get("storeName")), description: text(data.get("description")) || null,
     currency: storeCurrency, contactPhone: text(data.get("contactPhone")) || null,
@@ -57,6 +102,7 @@ export function parseStoreSettings(data) {
     bankAccountNumber: text(data.get("bankAccountNumber")), bankIban: text(data.get("bankIban")),
     email: text(data.get("email")).toLowerCase() || null, address: text(data.get("address")) || null,
     defaultLocale: text(data.get("defaultLocale")), isActive: data.get("isActive") === "on",
+    deliveryZones: parsedDeliveryZones.ok ? parsedDeliveryZones.value : [],
   };
   const errors = {};
   if (!value.storeName || value.storeName.length > 120) errors.storeName = "invalidName";
@@ -67,6 +113,7 @@ export function parseStoreSettings(data) {
   if (value.email && (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.email) || value.email.length > 254)) errors.email = "invalidEmail";
   if (value.address && value.address.length > 500) errors.address = "tooLong";
   if (value.defaultLocale !== "ar") errors.defaultLocale = "invalidLocale";
+  if (!parsedDeliveryZones.ok) errors.deliveryZones = "invalidDeliveryZones";
   return Object.keys(errors).length ? { ok: false, errors } : { ok: true, value };
 }
 

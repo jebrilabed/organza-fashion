@@ -30,10 +30,11 @@ export function displayVariantOptions(value: Prisma.JsonValue | null) {
 }
 
 export function addressParts(value: Prisma.JsonValue) {
-  if (!value || Array.isArray(value) || typeof value !== "object") return { address: "", city: "" };
+  if (!value || Array.isArray(value) || typeof value !== "object") return { address: "", city: "", deliveryZoneName: "" };
   const record = value as Record<string, Prisma.JsonValue>;
   return {
     address: typeof record.address === "string" ? record.address : "",
     city: typeof record.city === "string" ? record.city : "",
+    deliveryZoneName: typeof record.deliveryZoneName === "string" ? record.deliveryZoneName : "",
   };
 }
