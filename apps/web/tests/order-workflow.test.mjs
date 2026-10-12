@@ -37,6 +37,13 @@ test("checkout accepts a local mobile number without a country code", () => {
   });
 });
 
+test("checkout normalizes Arabic and Persian numerals in mobile numbers", () => {
+  const form = validForm({ contactPhone: "٠٥٥ ۱۲۳ ٤٥٦٧" });
+  const parsed = parseCheckoutInput(form);
+  assert.equal(parsed.ok, true);
+  assert.equal(parsed.value.contactPhone, "055 123 4567");
+});
+
 test("checkout accepts required contact details without an email address", () => {
   const form = validForm();
   form.delete("contactEmail");

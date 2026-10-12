@@ -46,10 +46,17 @@ export function readDeliveryZones(value) {
   return uniqueDeliveryZones(value) ?? [];
 }
 
+function normalizePhoneDigits(value) {
+  return value.replace(/[٠-٩۰-۹]/g, (digit) => {
+    const codePoint = digit.charCodeAt(0);
+    return String(codePoint >= 0x06f0 ? codePoint - 0x06f0 : codePoint - 0x0660);
+  });
+}
+
 export function parseRegistration(data) {
   const name = text(data.get("name"));
   const email = text(data.get("email")).toLowerCase();
-  const phone = text(data.get("phone")).replace(/[\s().-]/g, "");
+  const phone = normalizePhoneDigits(text(data.get("phone"))).replace(/[\s().-]/g, "");
   const phoneDigits = phone.replace(/\D/g, "").length;
   const addressLine = text(data.get("addressLine"));
   const city = text(data.get("city"));

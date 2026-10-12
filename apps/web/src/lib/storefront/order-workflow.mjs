@@ -26,6 +26,13 @@ export function canAdminSetOrderStatus(from, to) {
   return availableAdminOrderStatuses(from).includes(to);
 }
 
+function normalizePhoneDigits(value) {
+  return value.replace(/[٠-٩۰-۹]/g, (digit) => {
+    const codePoint = digit.charCodeAt(0);
+    return String(codePoint >= 0x06f0 ? codePoint - 0x06f0 : codePoint - 0x0660);
+  });
+}
+
 export function parseCheckoutInput(formData) {
   const readText = (field) => {
     const value = formData.get(field);
@@ -34,7 +41,7 @@ export function parseCheckoutInput(formData) {
   const raw = {
     contactName: readText("contactName"),
     contactEmail: readText("contactEmail").toLowerCase(),
-    contactPhone: readText("contactPhone"),
+    contactPhone: normalizePhoneDigits(readText("contactPhone")),
     address: readText("address"),
     city: readText("city"),
     deliveryZoneName: readText("deliveryZoneName"),

@@ -17,6 +17,12 @@ test("registration normalizes email and never accepts a client role", () => {
   assert.equal("role" in parsed.value, false);
 });
 
+test("registration accepts Arabic and Persian numerals in local mobile numbers", () => {
+  const parsed = parseRegistration(form({ name: "Sara", email: "sara@example.com", phone: "٠٥٥ ۱۲۳ ٤٥٦٧", addressLine: "Street 1", city: "Riyadh", password: "Pass1234", confirmation: "Pass1234" }));
+  assert.equal(parsed.ok, true);
+  assert.equal(parsed.value.phone, "0551234567");
+});
+
 test("registration rejects short or mismatched passwords", () => {
   assert.equal(parseRegistration(form({ name: "Sara", email: "sara@example.com", password: "short", confirmation: "different" })).ok, false);
   assert.equal(parseRegistration(form({ name: "Sara", email: "sara@example.com", password: "Pass123", confirmation: "Pass123" })).ok, false);
