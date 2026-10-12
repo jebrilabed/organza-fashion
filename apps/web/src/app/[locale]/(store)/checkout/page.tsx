@@ -28,7 +28,7 @@ export default async function CheckoutPage({ params }: { params: Promise<{ local
     getCurrentUser(),
     prisma.storeSettings.findUnique({ where: { id: "singleton" }, select: { isActive: true, configuration: true, shippingSettings: true } }),
   ]);
-  const userId = user?.role === "CUSTOMER" ? user.id : null;
+  const userId = user?.id ?? null;
   const [defaultAddress, customer] = await Promise.all([
     userId ? prisma.customerAddress.findFirst({ where: { userId, isDefault: true } }) : Promise.resolve(null),
     userId ? prisma.customer.findUnique({ where: { userId }, select: { phone: true } }) : Promise.resolve(null),

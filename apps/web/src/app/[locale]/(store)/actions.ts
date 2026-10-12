@@ -196,7 +196,7 @@ export async function submitCheckoutAction(_previousState: CheckoutActionState, 
   }
   let checkoutStage = "session";
   try {
-    const userId = user?.role === "CUSTOMER" ? user.id : null;
+    const userId = user?.id ?? null;
     const guestTokenHash = userId ? null : await readCartTokenHash();
     const secret = process.env.AUTH_SECRET ?? "";
     const ownerBinding = userId
@@ -255,7 +255,7 @@ export async function submitCheckoutAction(_previousState: CheckoutActionState, 
 export async function recoverCheckoutAttemptAction(token: string): Promise<string | null> {
   try {
     const user = await getCurrentUser();
-    const userId = user?.role === "CUSTOMER" ? user.id : null;
+    const userId = user?.id ?? null;
     const guestTokenHash = userId ? null : await readCartTokenHash();
     if (!userId && !guestTokenHash) return null;
     const secret = process.env.AUTH_SECRET ?? "";

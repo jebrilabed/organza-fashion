@@ -16,15 +16,15 @@ consistency and confirmation security only. The only supported UI locale is Arab
 - `/ar/order-confirmation/[orderNumber]` — noindex confirmation with order and shipping
   summary. Authenticated orders are restricted to their customer; guest confirmations
   use a cryptographically random 128-bit order number as a capability.
-- `/ar/orders` and `/ar/orders/[orderNumber]` — authenticated order history, scoped in
-  every query to the signed-in user's database ID.
+- `/ar/orders` and `/ar/orders/[orderNumber]` — authenticated customer or admin order
+  history, scoped in every query to the signed-in user's database ID.
 - `/admin/orders` and `/admin/orders/[id]` — paginated/filterable admin order list and
   order details/status control.
 
-The customer order history works for existing authenticated users. This phase does
-not add customer registration; guest orders are not automatically linked to a later
-account. The existing credentials login does not preserve a return destination, so a
-signed-out user who opens `/ar/orders` must navigate back after logging in.
+Order history works for existing authenticated customer and admin accounts. Guest
+orders are not automatically linked to a later account. The existing credentials
+login does not preserve a return destination, so a signed-out user who opens
+`/ar/orders` must navigate back after logging in.
 
 ## Cart architecture and validation
 

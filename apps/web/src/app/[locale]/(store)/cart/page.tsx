@@ -47,10 +47,13 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
                 const adjustable = isCartLineSellable(item) && item.sku.stockQuantity > 0;
                 const translation = item.sku.product.translations[0];
                 const image = item.sku.product.images[0];
+                const variantOptions = item.sku.variantOptions;
+                const colorImageUrl = variantOptions && typeof variantOptions === "object" && !Array.isArray(variantOptions) &&
+                  typeof variantOptions.ColorImageUrl === "string" ? variantOptions.ColorImageUrl : null;
                 const lineTotal = item.sku.price.mul(item.quantity);
                 return (
                   <Card className="store-cart-item" key={item.id}>
-                    <div className="store-cart-item__image">{image ? <SafeProductImage alt={image.altText || translation?.name || messages.ar.product} sizes="96px" src={image.url} /> : <span>{messages.ar.noImage}</span>}</div>
+                    <div className="store-cart-item__image">{colorImageUrl || image ? <SafeProductImage alt={image?.altText || translation?.name || messages.ar.product} sizes="96px" src={colorImageUrl ?? image!.url} /> : <span>{messages.ar.noImage}</span>}</div>
                     <div className="store-cart-item__content">
                       <h2>{translation ? <Link href={`/ar/products/${encodeURIComponent(translation.slug)}`}>{translation.name}</Link> : messages.ar.unavailableItem}</h2>
                       <p className="store-muted"><VariantOptionsDisplay options={item.sku.variantOptions} /></p>

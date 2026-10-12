@@ -18,7 +18,7 @@ export default async function OrderConfirmationPage({ params }: { params: Promis
   const normalizedOrderNumber = orderNumber.toUpperCase();
   if (!/^(?:FAR-[A-F0-9]{32}|OF-[0-9A-HJKMNP-TV-Z]{13})$/.test(normalizedOrderNumber)) notFound();
   const user = await getCurrentUser();
-  const userId = user?.role === "CUSTOMER" ? user.id : null;
+  const userId = user?.id ?? null;
   const order = await prisma.order.findUnique({
     where: { orderNumber: normalizedOrderNumber },
     select: {

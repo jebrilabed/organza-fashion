@@ -56,7 +56,7 @@ async function ensureGuestCart() {
   });
 }
 
-async function ensureCustomerCart(userId: string) {
+async function ensureUserCart(userId: string) {
   const jar = await cookies();
   const token = jar.get(CART_COOKIE_NAME)?.value;
   const guestTokenHash = validToken(token) ? hashToken(token) : null;
@@ -146,16 +146,16 @@ async function ensureCustomerCart(userId: string) {
   });
 }
 
-/** Returns the cart belonging to the authenticated customer, or to the HTTP-only guest token. */
+/** Returns the cart belonging to the authenticated user, or to the HTTP-only guest token. */
 export async function ensureActiveCart() {
   const user = await getCurrentUser();
-  return user?.role === "CUSTOMER" ? ensureCustomerCart(user.id) : ensureGuestCart();
+  return user ? ensureUserCart(user.id) : ensureGuestCart();
 }
 
 export async function getCartCount() {
   const user = await getCurrentUser();
-  if (user?.role === "CUSTOMER") {
-    const cart = await ensureCustomerCart(user.id);
+  if (user) {
+    const cart = await ensureUserCart(user.id);
     const items = await prisma.cartItem.findMany({ where: { cartId: cart.id }, select: { quantity: true } });
     return items.reduce((count, item) => count + item.quantity, 0);
   }
@@ -172,9 +172,9 @@ export async function getCartCount() {
 export async function getCartSnapshot() {
   const user = await getCurrentUser();
   let cartId: string;
-  if (user?.role === "CUSTOMER") {
-    // Customer cart access can merge an existing guest cart, but it never writes cookies.
-    const cart = await ensureCustomerCart(user.id);
+  if (user) {
+    // Account cart access can merge an existing guest cart, but it never writes cookies.
+    const cart = await ensureUserCart(user.id);
     cartId = cart.id;
   } else {
     // Rendering an empty guest cart must not create a cookie or mutate the database.

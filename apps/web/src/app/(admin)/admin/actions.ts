@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@/generated/prisma/client";
-import { CartStatus, CategoryStatus, Locale, OrderStatus, ProductKind, ProductStatus } from "@/generated/prisma/enums";
+import { CategoryStatus, Locale, OrderStatus, ProductKind, ProductStatus } from "@/generated/prisma/enums";
 import { requireAdmin } from "@/lib/auth/authorization";
 import { adminMessages } from "@/lib/admin/messages";
 import type { AdminActionState } from "@/lib/admin/config";
@@ -597,24 +597,39 @@ export async function deleteProduct(_previous: AdminActionState, formData: FormD
 
       const skuIds = product.skus.map(({ id: skuId }) => skuId);
       if (skuIds.length) {
-        const orderItems = await tx.orderItem.findMany({
-          where: { skuId: { in: skuIds } },
-          select: { order: { select: { status: true } } },
+        const activeOrders = await tx.order.findMany({
+          where: {
+            status: { in: [OrderStatus.PENDING, OrderStatus.CONFIRMED, OrderStatus.PROCESSING] },
+            items: { some: { skuId: { in: skuIds } } },
+          },
+          select: {
+            id: true,
+            subtotal: true,
+            shippingCost: true,
+            discountTotal: true,
+            items: { select: { id: true, skuId: true, subtotal: true } },
+          },
         });
-        if (orderItems.some(({ order }) => order.status === OrderStatus.PENDING || order.status === OrderStatus.CONFIRMED || order.status === OrderStatus.PROCESSING)) {
-          return "active-order" as const;
+        for (const order of activeOrders) {
+          const removedItems = order.items.filter((item) => item.skuId && skuIds.includes(item.skuId));
+          const remainingItems = order.items.filter((item) => !item.skuId || !skuIds.includes(item.skuId));
+          const subtotal = remainingItems.reduce((sum, item) => sum.add(item.subtotal), new Prisma.Decimal(0));
+          const discountTotal = order.discountTotal.greaterThan(subtotal) ? subtotal : order.discountTotal;
+          const empty = remainingItems.length === 0;
+
+          await tx.orderItem.deleteMany({ where: { id: { in: removedItems.map(({ id: itemId }) => itemId) } } });
+          await tx.order.update({
+            where: { id: order.id },
+            data: {
+              ...(empty ? { status: OrderStatus.CANCELLED, shippingCost: new Prisma.Decimal(0) } : {}),
+              subtotal,
+              discountTotal: empty ? new Prisma.Decimal(0) : discountTotal,
+              total: empty ? new Prisma.Decimal(0) : subtotal.add(order.shippingCost).sub(discountTotal),
+            },
+          });
         }
 
-        const cartItems = await tx.cartItem.findMany({
-          where: { skuId: { in: skuIds } },
-          select: { cart: { select: { status: true, expiresAt: true } } },
-        });
-        const now = new Date();
-        if (cartItems.some(({ cart }) => cart.status === CartStatus.ACTIVE && (!cart.expiresAt || cart.expiresAt > now))) {
-          return "active-cart" as const;
-        }
-
-        // Keep historical order snapshots while detaching them from the SKU.
+        // Keep completed order snapshots while detaching them from the SKU.
         await tx.orderItem.updateMany({ where: { skuId: { in: skuIds } }, data: { skuId: null } });
         await tx.cartItem.deleteMany({ where: { skuId: { in: skuIds } } });
         await tx.productSku.deleteMany({ where: { id: { in: skuIds } } });
@@ -635,8 +650,6 @@ export async function deleteProduct(_previous: AdminActionState, formData: FormD
     });
 
     if (result === "missing") return { error: messages.productNotFound };
-    if (result === "active-cart") return { error: messages.productDeleteBlockedByCart };
-    if (result === "active-order") return { error: messages.productDeleteBlockedByOrder };
 
     revalidatePath("/admin");
     revalidatePath("/admin/products");
