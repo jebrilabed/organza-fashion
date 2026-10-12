@@ -43,7 +43,7 @@ export function parseCheckoutInput(formData) {
   const paymentMethod = readText("paymentMethod");
   const errors = {};
   if (!raw.contactName || raw.contactName.length > 200) errors.contactName = "validationName";
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw.contactEmail) || raw.contactEmail.length > 254) errors.contactEmail = "validationEmail";
+  if (raw.contactEmail && (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw.contactEmail) || raw.contactEmail.length > 254)) errors.contactEmail = "validationEmail";
   const digitCount = raw.contactPhone.replace(/\D/g, "").length;
   if (raw.contactPhone.length > 40 || digitCount < 8 || digitCount > 16 || !/^\+[1-9][()\d\s.-]+$/.test(raw.contactPhone)) errors.contactPhone = "validationPhone";
   if (!raw.address || raw.address.length > 500) errors.address = "validationAddress";

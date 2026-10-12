@@ -36,6 +36,14 @@ test("checkout trims contact details and accepts a neutral international phone f
   });
 });
 
+test("checkout accepts required contact details without an email address", () => {
+  const form = validForm();
+  form.delete("contactEmail");
+  const parsed = parseCheckoutInput(form);
+  assert.equal(parsed.ok, true);
+  assert.equal(parsed.value.contactEmail, "");
+});
+
 test("checkout requires a delivery zone", () => {
   assert.deepEqual(parseCheckoutInput(validForm({ deliveryZoneName: "" })).errors, { deliveryZoneName: "validationDeliveryZone" });
 });

@@ -10,12 +10,11 @@ import type { BankTransferDetails } from "@/lib/storefront/payment-settings";
 
 const initialState: CheckoutActionState = {};
 
-export function CheckoutForm({ checkoutToken, quoteFingerprint, checkoutExpiresAt, contactName, contactEmail, contactPhone, address, city, bankTransfer, deliveryZones }: {
+export function CheckoutForm({ checkoutToken, quoteFingerprint, checkoutExpiresAt, contactName, contactPhone, address, city, bankTransfer, deliveryZones }: {
   checkoutToken: string;
   quoteFingerprint: string;
   checkoutExpiresAt: number;
   contactName: string;
-  contactEmail: string;
   contactPhone: string;
   address: string;
   city: string;
@@ -53,7 +52,6 @@ export function CheckoutForm({ checkoutToken, quoteFingerprint, checkoutExpiresA
     <form action={action} className="store-form">
       <input name="checkoutToken" type="hidden" value={activeCheckoutToken} />
       <Input autoComplete="name" defaultValue={values?.contactName ?? contactName} label={messages.ar.contactName} maxLength={200} name="contactName" required error={fieldError("contactName")} />
-      <Input autoComplete="email" dir="ltr" defaultValue={values?.contactEmail ?? contactEmail} label={messages.ar.contactEmail} maxLength={254} name="contactEmail" required type="email" error={fieldError("contactEmail")} />
       <Input autoComplete="tel" dir="ltr" defaultValue={values?.contactPhone ?? contactPhone} hint={messages.ar.whatsappCountryCodeHint} label={messages.ar.phone} maxLength={40} name="contactPhone" placeholder="+9665XXXXXXXX" required error={fieldError("contactPhone")} />
       <label className="ui-field">
         <span className="ui-field__label">{messages.ar.deliveryZone}</span>

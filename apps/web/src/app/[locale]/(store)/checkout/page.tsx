@@ -93,7 +93,6 @@ export default async function CheckoutPage({ params }: { params: Promise<{ local
                 quoteFingerprint={checkoutAttempt.fingerprint}
                 checkoutExpiresAt={checkoutAttempt.expiresAt}
                 contactName={userId ? defaultAddress?.fullName ?? user?.name ?? "" : ""}
-                contactEmail={userId ? user?.email ?? "" : ""}
                 contactPhone={defaultAddress?.phone ?? customer?.phone ?? ""}
                 address={defaultAddress?.addressLine ?? ""}
                 city={defaultAddress?.city ?? ""}

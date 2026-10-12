@@ -267,7 +267,7 @@ export async function createOrderFromCart({
         paymentMethod,
         contactName,
         contactPhone,
-        contactEmail,
+        contactEmail: contactEmail || null,
         shippingAddress,
         customerNote: customerNote || null,
         currency,
