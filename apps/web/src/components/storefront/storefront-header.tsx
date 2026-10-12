@@ -4,6 +4,7 @@ import { auth, signOut } from "@/auth";
 import { getCartCount } from "@/lib/storefront/cart";
 import { storefrontMessages as messages } from "@/lib/storefront/messages";
 import { phase7Messages } from "@/lib/phase7/messages";
+import { StoreMobileMenu } from "./store-mobile-menu";
 
 async function storefrontSignOut() {
   "use server";
@@ -69,26 +70,20 @@ export async function StorefrontHeader() {
             <span>{messages.ar.cart}</span>
             <span className="store-cart-count">{count}</span>
           </Link>
-          <details className="store-mobile-menu">
-            <summary aria-label="فتح القائمة">
-              <MenuIcon />
-              <span>القائمة</span>
-            </summary>
-            <nav aria-label={messages.ar.home} className="store-mobile-menu__panel">
-              <Link href="/ar">{messages.ar.home}</Link>
-              <Link href="/ar/products">{messages.ar.products}</Link>
-              {isSignedIn && <Link href="/ar/orders">{messages.ar.orderHistory}</Link>}
-              <form action="/ar/search" method="get">
-                <input aria-label={messages.ar.search} maxLength={100} name="q" placeholder="ابحثي في التشكيلة" type="search" />
-                <button type="submit">بحث</button>
-              </form>
-              <Link className={isAdmin ? "store-header__mobile-account store-header__account--admin" : "store-header__mobile-account"} href={accountHref}>{accountLabel}</Link>
-              {isSignedIn && <form action={storefrontSignOut} className="store-header__mobile-sign-out">
-                <button type="submit">{phase7Messages.ar.signOut}</button>
-              </form>}
-              {!isSignedIn && <Link href="/ar/register">{messages.ar.register}</Link>}
-            </nav>
-          </details>
+          <StoreMobileMenu label={messages.ar.home}>
+            <Link href="/ar">{messages.ar.home}</Link>
+            <Link href="/ar/products">{messages.ar.products}</Link>
+            {isSignedIn && <Link href="/ar/orders">{messages.ar.orderHistory}</Link>}
+            <form action="/ar/search" method="get">
+              <input aria-label={messages.ar.search} maxLength={100} name="q" placeholder="ابحثي في التشكيلة" type="search" />
+              <button type="submit">بحث</button>
+            </form>
+            <Link className={isAdmin ? "store-header__mobile-account store-header__account--admin" : "store-header__mobile-account"} href={accountHref}>{accountLabel}</Link>
+            {isSignedIn && <form action={storefrontSignOut} className="store-header__mobile-sign-out">
+              <button type="submit">{phase7Messages.ar.signOut}</button>
+            </form>}
+            {!isSignedIn && <Link href="/ar/register">{messages.ar.register}</Link>}
+          </StoreMobileMenu>
         </div>
       </div>
     </header>
@@ -105,10 +100,6 @@ function SignOutIcon() {
 
 function CartIcon() {
   return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M3 4h2l2.2 11.1a2 2 0 0 0 2 1.6h8.7a2 2 0 0 0 1.9-1.4L22 8H6" /><circle cx="9.5" cy="20" r="1" /><circle cx="18" cy="20" r="1" /></svg>;
-}
-
-function MenuIcon() {
-  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h16" /></svg>;
 }
 
 function SearchIcon() {

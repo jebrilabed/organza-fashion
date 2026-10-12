@@ -19,7 +19,7 @@ export function CheckoutForm({ checkoutToken, quoteFingerprint, checkoutExpiresA
   address: string;
   city: string;
   bankTransfer: BankTransferDetails | null;
-  deliveryZones: { name: string; price: string; priceLabel: string; totalLabel: string }[];
+  deliveryZones: { name: string; price: string; priceLabel: string; discountLabel: string | null; totalLabel: string }[];
 }) {
   const [activeCheckoutToken, setActiveCheckoutToken] = useState(checkoutToken);
   const [paymentMethod, setPaymentMethod] = useState("CASH_ON_DELIVERY");
@@ -52,7 +52,7 @@ export function CheckoutForm({ checkoutToken, quoteFingerprint, checkoutExpiresA
     <form action={action} className="store-form">
       <input name="checkoutToken" type="hidden" value={activeCheckoutToken} />
       <Input autoComplete="name" defaultValue={values?.contactName ?? contactName} label={messages.ar.contactName} maxLength={200} name="contactName" required error={fieldError("contactName")} />
-      <Input autoComplete="tel" dir="ltr" defaultValue={values?.contactPhone ?? contactPhone} hint={messages.ar.whatsappCountryCodeHint} label={messages.ar.phone} maxLength={40} name="contactPhone" placeholder="+9665XXXXXXXX" required error={fieldError("contactPhone")} />
+      <Input autoComplete="tel-national" dir="ltr" defaultValue={values?.contactPhone ?? contactPhone} hint={messages.ar.localMobileNumberHint} inputMode="tel" label={messages.ar.phone} maxLength={20} name="contactPhone" required error={fieldError("contactPhone")} />
       <label className="ui-field">
         <span className="ui-field__label">{messages.ar.deliveryZone}</span>
         <select className="ui-field__control" name="deliveryZoneName" required value={deliveryZoneName} onChange={(event) => setDeliveryZoneName(event.target.value)}>
@@ -62,6 +62,7 @@ export function CheckoutForm({ checkoutToken, quoteFingerprint, checkoutExpiresA
       {fieldError("deliveryZoneName") && <p className="ui-field__error">{fieldError("deliveryZoneName")}</p>}
       {selectedDeliveryZone && <div>
         <p className="store-summary__row"><span>{messages.ar.shippingCost}</span><strong>{selectedDeliveryZone.priceLabel}</strong></p>
+        {selectedDeliveryZone.discountLabel && <p className="store-summary__row"><span>{messages.ar.fifthOrderDiscount}</span><strong>-{selectedDeliveryZone.discountLabel}</strong></p>}
         <p className="store-summary__row"><span>{messages.ar.total}</span><strong>{selectedDeliveryZone.totalLabel}</strong></p>
       </div>}
       <Input autoComplete="street-address" defaultValue={values?.address ?? address} label={messages.ar.detailedAddress} maxLength={500} name="address" required error={fieldError("address")} />

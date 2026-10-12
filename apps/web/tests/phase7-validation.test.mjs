@@ -11,9 +11,9 @@ function form(values) {
 }
 
 test("registration normalizes email and never accepts a client role", () => {
-  const parsed = parseRegistration(form({ name: " Sara ", email: "SARA@example.com", password: "Pass1234", confirmation: "Pass1234", role: "ADMIN" }));
+  const parsed = parseRegistration(form({ name: " Sara ", email: "SARA@example.com", phone: "055 123 4567", addressLine: "Street 1", city: "Riyadh", password: "Pass1234", confirmation: "Pass1234", role: "ADMIN" }));
   assert.equal(parsed.ok, true);
-  assert.deepEqual(parsed.value, { name: "Sara", email: "sara@example.com", password: "Pass1234" });
+  assert.deepEqual(parsed.value, { name: "Sara", email: "sara@example.com", phone: "0551234567", addressLine: "Street 1", city: "Riyadh", password: "Pass1234" });
   assert.equal("role" in parsed.value, false);
 });
 

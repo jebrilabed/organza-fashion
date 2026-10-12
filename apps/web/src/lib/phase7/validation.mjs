@@ -49,9 +49,7 @@ export function readDeliveryZones(value) {
 export function parseRegistration(data) {
   const name = text(data.get("name"));
   const email = text(data.get("email")).toLowerCase();
-  const countryCode = text(data.get("countryCode"));
-  const localPhone = text(data.get("phone")).replace(/[\s().-]/g, "").replace(/^0+/, "");
-  const phone = `${countryCode}${localPhone}`;
+  const phone = text(data.get("phone")).replace(/[\s().-]/g, "");
   const phoneDigits = phone.replace(/\D/g, "").length;
   const addressLine = text(data.get("addressLine"));
   const city = text(data.get("city"));
@@ -60,7 +58,7 @@ export function parseRegistration(data) {
   const errors = {};
   if (!name || name.length > 120) errors.name = "invalidName";
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) errors.email = "invalidEmail";
-  if (!/^\+[1-9]\d{0,3}$/.test(countryCode) || !/^\d+$/.test(localPhone) || phoneDigits < 8 || phoneDigits > 15) errors.phone = "invalidPhone";
+  if (!/^\d+$/.test(phone) || phoneDigits < 8 || phoneDigits > 15) errors.phone = "invalidPhone";
   if (!addressLine || addressLine.length > 500) errors.addressLine = "invalidAddress";
   if (!city || city.length > 120) errors.city = "invalidCity";
   if (password.length < 8 || password.length > 128) errors.password = "invalidPassword";

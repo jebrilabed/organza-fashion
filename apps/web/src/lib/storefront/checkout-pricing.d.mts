@@ -5,3 +5,4 @@ export function calculateCheckoutAmounts(items: CheckoutPricedLine[], shippingAm
   shipping: string;
   total: string;
 } | null;
+export function calculateFifthOrderDiscount(subtotal: string, previousOrderCount: number): string;

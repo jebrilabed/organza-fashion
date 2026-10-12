@@ -5,6 +5,8 @@ import { Badge, Card, Container, Select } from "@/components/ui";
 import { StorefrontSubmitButton } from "@/components/storefront/submit-button";
 import { DeleteOrderForm } from "@/components/admin/delete-order-form";
 import { ToastMessage } from "@/components/ui/toast";
+import { SafeProductImage } from "@/components/storefront/safe-product-image";
+import { VariantOptionsDisplay } from "@/components/storefront/variant-options-display";
 import { OrderStatus, PaymentStatus } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db/prisma";
 import { adminMessages } from "@/lib/admin/messages";
@@ -37,10 +39,28 @@ export default async function AdminOrderDetails({ params, searchParams }: {
       currency: true,
       subtotal: true,
       shippingCost: true,
+      discountTotal: true,
       total: true,
       createdAt: true,
       updatedAt: true,
-      items: { orderBy: { createdAt: "asc" }, select: { id: true, productNameSnapshot: true, variantSnapshot: true, unitPrice: true, quantity: true, subtotal: true } },
+      items: { orderBy: { createdAt: "asc" }, select: {
+        id: true,
+        productNameSnapshot: true,
+        productImageSnapshot: true,
+        variantSnapshot: true,
+        unitPrice: true,
+        quantity: true,
+        subtotal: true,
+        sku: {
+          select: {
+            product: {
+              select: {
+                images: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }], take: 1, select: { url: true } },
+              },
+            },
+          },
+        },
+      } },
     },
   });
   if (!order) notFound();
@@ -64,17 +84,24 @@ export default async function AdminOrderDetails({ params, searchParams }: {
         <div className="ui-table-wrap admin-order-items-table-wrap" role="region" aria-label={messages.ar.orderedItems} tabIndex={0}>
           <table className="ui-table admin-order-items-table">
             <thead><tr><th>{messages.ar.product}</th><th>{messages.ar.quantity}</th><th>{messages.ar.price}</th><th>{messages.ar.lineTotal}</th></tr></thead>
-            <tbody>{order.items.map((item) => <tr key={item.id}>
-              <td data-label={messages.ar.product}>{item.productNameSnapshot}{typeof item.variantSnapshot === "object" && item.variantSnapshot && !Array.isArray(item.variantSnapshot) ? <small>{Object.entries(item.variantSnapshot).map(([key, value]) => `${key}: ${String(value)}`).join(" · ")}</small> : null}</td>
+            <tbody>{order.items.map((item) => {
+              const imageUrl = item.productImageSnapshot ?? item.sku?.product.images[0]?.url;
+              return <tr key={item.id}>
+              <td data-label={messages.ar.product}><div className="admin-order-item-product">
+                {imageUrl ? <SafeProductImage alt={item.productNameSnapshot} className="admin-order-item-product__image" sizes="64px" src={imageUrl} /> : <span className="admin-order-item-product__empty">{messages.ar.noImage}</span>}
+                <div><strong>{item.productNameSnapshot}</strong><VariantOptionsDisplay options={item.variantSnapshot} /></div>
+              </div></td>
               <td data-label={messages.ar.quantity}>{item.quantity}</td>
               <td data-label={messages.ar.price}>{formatMoney(item.unitPrice, order.currency)}</td>
               <td data-label={messages.ar.lineTotal}>{formatMoney(item.subtotal, order.currency)}</td>
-            </tr>)}</tbody>
+            </tr>;
+            })}</tbody>
           </table>
         </div>
         <div className="admin-order-totals">
           <p className="admin-order-total"><span>{messages.ar.subtotal}</span><strong>{formatMoney(order.subtotal, order.currency)}</strong></p>
           <p className="admin-order-total"><span>{messages.ar.shippingCost}</span><strong>{formatMoney(order.shippingCost, order.currency)}</strong></p>
+          {order.discountTotal.greaterThan(0) && <p className="admin-order-total"><span>{messages.ar.fifthOrderDiscount}</span><strong>-{formatMoney(order.discountTotal, order.currency)}</strong></p>}
           <p className="admin-order-total admin-order-total--grand"><span>{messages.ar.total}</span><strong>{formatMoney(order.total, order.currency)}</strong></p>
         </div>
       </Card>

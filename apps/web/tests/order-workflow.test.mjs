@@ -6,12 +6,13 @@ import {
   parseCartQuantity,
   parseCheckoutInput,
 } from "../src/lib/storefront/order-workflow.mjs";
+import { calculateFifthOrderDiscount } from "../src/lib/storefront/checkout-pricing.mjs";
 
 function validForm(overrides = {}) {
   const form = new FormData();
   form.set("contactName", "  سارة  ");
   form.set("contactEmail", " SARA@example.com ");
-  form.set("contactPhone", "+966 50 123 4567");
+  form.set("contactPhone", "055 123 4567");
   form.set("address", "شارع النخيل ١");
   form.set("city", "الرياض");
   form.set("deliveryZoneName", "الرياض");
@@ -21,13 +22,13 @@ function validForm(overrides = {}) {
   return form;
 }
 
-test("checkout trims contact details and accepts a neutral international phone format", () => {
+test("checkout accepts a local mobile number without a country code", () => {
   const parsed = parseCheckoutInput(validForm());
   assert.equal(parsed.ok, true);
   assert.deepEqual(parsed.value, {
     contactName: "سارة",
     contactEmail: "sara@example.com",
-    contactPhone: "+966 50 123 4567",
+    contactPhone: "055 123 4567",
     address: "شارع النخيل ١",
     city: "الرياض",
     deliveryZoneName: "الرياض",
@@ -42,6 +43,12 @@ test("checkout accepts required contact details without an email address", () =>
   const parsed = parseCheckoutInput(form);
   assert.equal(parsed.ok, true);
   assert.equal(parsed.value.contactEmail, "");
+});
+
+test("fifth and every fifth order receive 30 percent off the product subtotal", () => {
+  assert.equal(calculateFifthOrderDiscount("100.00", 3), "0.00");
+  assert.equal(calculateFifthOrderDiscount("100.00", 4), "30.00");
+  assert.equal(calculateFifthOrderDiscount("100.00", 9), "30.00");
 });
 
 test("checkout requires a delivery zone", () => {

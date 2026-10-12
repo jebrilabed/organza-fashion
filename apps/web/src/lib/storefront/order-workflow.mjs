@@ -45,7 +45,7 @@ export function parseCheckoutInput(formData) {
   if (!raw.contactName || raw.contactName.length > 200) errors.contactName = "validationName";
   if (raw.contactEmail && (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw.contactEmail) || raw.contactEmail.length > 254)) errors.contactEmail = "validationEmail";
   const digitCount = raw.contactPhone.replace(/\D/g, "").length;
-  if (raw.contactPhone.length > 40 || digitCount < 8 || digitCount > 16 || !/^\+[1-9][()\d\s.-]+$/.test(raw.contactPhone)) errors.contactPhone = "validationPhone";
+  if (raw.contactPhone.length > 20 || digitCount < 8 || digitCount > 16 || !/^\+?\d[()\d\s.-]*$/.test(raw.contactPhone)) errors.contactPhone = "validationPhone";
   if (!raw.address || raw.address.length > 500) errors.address = "validationAddress";
   if (!raw.city || raw.city.length > 120) errors.city = "validationCity";
   if (!raw.deliveryZoneName || raw.deliveryZoneName.length > 120) errors.deliveryZoneName = "validationDeliveryZone";

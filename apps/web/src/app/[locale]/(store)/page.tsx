@@ -133,6 +133,7 @@ export default async function StorefrontHome({ params, searchParams, categoryTra
                 <p>
                   {storeData.storeDescription || "اكتشفي تصاميم organza fashion التي تجمع بين جمال الأقمشة، الحرفية الرفيعة، وروح الأناقة المعاصرة."}
                 </p>
+                <p className="store-home__loyalty-offer">للعملاء المسجّلين: بعد كل 4 طلبات، خصم 30% على الطلب الخامس.</p>
                 <div className="store-home__hero-actions">
                   <Link className="ui-button ui-button--primary ui-button--large" href="/ar/products">
                     استكشف التشكيلة

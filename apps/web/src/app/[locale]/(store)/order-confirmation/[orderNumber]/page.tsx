@@ -30,6 +30,7 @@ export default async function OrderConfirmationPage({ params }: { params: Promis
       createdAt: true,
       subtotal: true,
       shippingCost: true,
+      discountTotal: true,
       total: true,
       currency: true,
       userId: true,
@@ -67,6 +68,7 @@ export default async function OrderConfirmationPage({ params }: { params: Promis
           </ul>
           <p className="store-summary__row"><span>{messages.ar.subtotal}</span><strong>{formatMoney(order.subtotal, order.currency)}</strong></p>
           <p className="store-summary__row"><span>{messages.ar.shippingCost}</span><strong>{formatMoney(order.shippingCost, order.currency)}</strong></p>
+          {order.discountTotal.greaterThan(0) && <p className="store-summary__row"><span>{messages.ar.fifthOrderDiscount}</span><strong>-{formatMoney(order.discountTotal, order.currency)}</strong></p>}
           <p className="store-summary__row"><span>{messages.ar.total}</span><strong>{formatMoney(order.total, order.currency)}</strong></p>
           {order.paymentStatus === "UNPAID" && <p className="store-muted">{messages.ar.paymentUnpaidNotice}</p>}
           <Link href="/ar">{messages.ar.continueShopping}</Link>

@@ -5,6 +5,7 @@ import { Card, Container } from "@/components/ui";
 import { CheckoutForm } from "@/components/storefront/checkout-form";
 import { CheckoutRecovery } from "@/components/storefront/checkout-recovery";
 import { isLocale } from "@/lib/i18n/config";
+import { OrderStatus } from "@/generated/prisma/enums";
 import { Prisma } from "@/generated/prisma/client";
 import { formatMoney } from "@/lib/storefront/format";
 import { VariantOptionsDisplay } from "@/components/storefront/variant-options-display";
@@ -15,6 +16,7 @@ import { getStoreCurrency } from "@/lib/storefront/orders";
 import { checkoutOwnerBinding, createCheckoutAttemptToken } from "@/lib/storefront/checkout-security.mjs";
 import { storefrontMessages as messages } from "@/lib/storefront/messages";
 import { getBankTransferDetails } from "@/lib/storefront/payment-settings";
+import { calculateFifthOrderDiscount } from "@/lib/storefront/checkout-pricing.mjs";
 import { readDeliveryZones } from "@/lib/phase7/validation.mjs";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
@@ -29,14 +31,16 @@ export default async function CheckoutPage({ params }: { params: Promise<{ local
     prisma.storeSettings.findUnique({ where: { id: "singleton" }, select: { isActive: true, configuration: true, shippingSettings: true } }),
   ]);
   const userId = user?.id ?? null;
-  const [defaultAddress, customer] = await Promise.all([
+  const [defaultAddress, customer, previousOrderCount] = await Promise.all([
     userId ? prisma.customerAddress.findFirst({ where: { userId, isDefault: true } }) : Promise.resolve(null),
     userId ? prisma.customer.findUnique({ where: { userId }, select: { phone: true } }) : Promise.resolve(null),
+    user?.role === "CUSTOMER" ? prisma.order.count({ where: { userId: user.id, status: { not: OrderStatus.CANCELLED } } }) : Promise.resolve(0),
   ]);
   const guestTokenHash = userId ? null : await readCartTokenHash();
   const items = cart?.items ?? [];
   const available = items.length > 0 && items.every(isCartLineAvailable) && !!currency && settings?.isActive !== false;
   const subtotal = items.reduce((sum, item) => sum.add(item.sku.price.mul(item.quantity)), new Prisma.Decimal(0));
+  const discountTotal = new Prisma.Decimal(calculateFifthOrderDiscount(subtotal.toFixed(2), previousOrderCount));
   const shippingSettings = settings?.shippingSettings;
   const deliveryZoneData = shippingSettings && typeof shippingSettings === "object" && !Array.isArray(shippingSettings) && "deliveryZones" in shippingSettings
     ? shippingSettings.deliveryZones
@@ -44,7 +48,8 @@ export default async function CheckoutPage({ params }: { params: Promise<{ local
   const deliveryZones = currency ? readDeliveryZones(deliveryZoneData).map((zone) => ({
     ...zone,
     priceLabel: formatMoney(zone.price, currency),
-    totalLabel: formatMoney(subtotal.add(new Prisma.Decimal(zone.price)), currency),
+    discountLabel: discountTotal.greaterThan(0) ? formatMoney(discountTotal, currency) : null,
+    totalLabel: formatMoney(subtotal.add(new Prisma.Decimal(zone.price)).sub(discountTotal), currency),
   })) : [];
   const secret = process.env.AUTH_SECRET ?? "";
   const ownerBinding = userId

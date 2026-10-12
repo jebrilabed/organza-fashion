@@ -342,6 +342,11 @@
   line-height: 1.85;
 }
 
+.store-home__loyalty-offer {
+  color: var(--brand-primary) !important;
+  font-weight: 700;
+}
+
 .store-home__hero-actions {
   display: flex;
   flex-wrap: wrap;

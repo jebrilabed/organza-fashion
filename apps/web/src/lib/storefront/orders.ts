@@ -1,13 +1,13 @@
 import "server-only";
 
 import { randomBytes } from "node:crypto";
-import { CartStatus, Locale, OrderStatus, PaymentMethod, PaymentStatus, ProductStatus } from "@/generated/prisma/enums";
+import { CartStatus, Locale, OrderStatus, PaymentMethod, PaymentStatus, ProductStatus, UserRole } from "@/generated/prisma/enums";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { storeCurrency } from "@/lib/phase7/validation.mjs";
 import { canAdminSetOrderStatus } from "./order-workflow.mjs";
 import { checkoutCartBinding, checkoutQuoteMatches } from "./checkout-security.mjs";
-import { calculateCheckoutAmounts } from "./checkout-pricing.mjs";
+import { calculateCheckoutAmounts, calculateFifthOrderDiscount } from "./checkout-pricing.mjs";
 import { buildOrderNotificationEvent, getOrderNotificationEventType } from "@/lib/notifications/order-events.mjs";
 import { getBankTransferDetails } from "./payment-settings";
 import { readDeliveryZones } from "@/lib/phase7/validation.mjs";
@@ -77,6 +77,12 @@ export async function createOrderFromCart({
   };
 }) {
   return prisma.$transaction(async (tx) => {
+    if (userId) {
+      await tx.$queryRaw(Prisma.sql`
+        SELECT "id" FROM "users" WHERE "id" = ${userId} FOR UPDATE
+      `);
+    }
+
     const findExistingOrder = async () => {
       const existing = await tx.order.findUnique({
         where: { idempotencyKey },
@@ -180,6 +186,7 @@ export async function createOrderFromCart({
                 id: true,
                 status: true,
                 translations: { where: { locale: Locale.AR }, take: 1, select: { name: true } },
+                images: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }], take: 1, select: { url: true } },
                 category: { select: { status: true } },
               },
             },
@@ -205,7 +212,6 @@ export async function createOrderFromCart({
     if (!amounts) throw new StorefrontOperationError("invalid-cart");
     const subtotal = new Prisma.Decimal(amounts.subtotal);
     const shippingCost = new Prisma.Decimal(amounts.shipping);
-    const total = new Prisma.Decimal(amounts.total);
     const orderItems: Prisma.OrderItemCreateWithoutOrderInput[] = [];
     for (const [index, item] of freshItems.entries()) {
       const { sku, quantity } = item;
@@ -217,9 +223,13 @@ export async function createOrderFromCart({
       if (sku.stockQuantity < quantity) throw new StorefrontOperationError("stock-changed");
 
       const lineTotal = new Prisma.Decimal(amounts.lineSubtotals[index]);
+      const variantOptions = sku.variantOptions;
+      const colorImageUrl = variantOptions && typeof variantOptions === "object" && !Array.isArray(variantOptions) &&
+        "ColorImageUrl" in variantOptions && typeof variantOptions.ColorImageUrl === "string" ? variantOptions.ColorImageUrl : null;
       orderItems.push({
         sku: { connect: { id: sku.id } },
         productNameSnapshot: sku.product.translations[0].name,
+        productImageSnapshot: colorImageUrl ?? sku.product.images[0]?.url ?? null,
         skuCodeSnapshot: sku.skuCode,
         variantSnapshot: sku.variantOptions ?? Prisma.JsonNull,
         unitPrice: sku.price,
@@ -246,6 +256,12 @@ export async function createOrderFromCart({
     }
     const shippingAddress = { address, city, deliveryZoneName: deliveryZone.name };
     const customer = userId ? await tx.customer.findUnique({ where: { userId }, select: { id: true } }) : null;
+    const account = userId ? await tx.user.findUnique({ where: { id: userId }, select: { role: true } }) : null;
+    const previousOrderCount = account?.role === UserRole.CUSTOMER
+      ? await tx.order.count({ where: { userId, status: { not: OrderStatus.CANCELLED } } })
+      : 0;
+    const discountTotal = new Prisma.Decimal(calculateFifthOrderDiscount(subtotal.toFixed(2), previousOrderCount));
+    const total = subtotal.add(shippingCost).sub(discountTotal);
 
     for (const item of freshItems) {
       const changed = await tx.productSku.updateMany({
@@ -273,6 +289,7 @@ export async function createOrderFromCart({
         currency,
         subtotal,
         shippingCost,
+        discountTotal,
         total,
         items: { create: orderItems },
         ...(paymentReceipt ? { paymentReceipt: { create: { mimeType: paymentReceipt.mimeType, data: Buffer.from(paymentReceipt.data) } } } : {}),

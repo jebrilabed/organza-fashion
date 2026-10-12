@@ -223,6 +223,12 @@
 .admin-order-items-table th:nth-child(4),
 .admin-order-items-table td:nth-child(4) { inline-size: 23%; }
 .admin-order-items-table td:first-child small { display: block; margin-block-start: .3rem; color: var(--text-muted); font-size: .8rem; }
+.admin-order-item-product { display: flex; min-inline-size: 0; align-items: center; gap: .75rem; }
+.admin-order-item-product__image,
+.admin-order-item-product__image img,
+.admin-order-item-product__empty { inline-size: 4rem; block-size: 5rem; flex: none; border-radius: .25rem; background: var(--surface-canvas); object-fit: cover; }
+.admin-order-item-product__empty { display: grid; place-items: center; padding: .25rem; color: var(--text-muted); font-size: .7rem; text-align: center; }
+.admin-order-item-product strong { overflow-wrap: anywhere; }
 .admin-order-items-table tbody tr:last-child td { border-block-end: 0; }
 .admin-order-totals { display: grid; inline-size: min(100%, 25rem); gap: .35rem; margin-inline-start: 0; margin-inline-end: auto; padding-block-start: .5rem; }
 .admin-order-total { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 1rem; margin: 0; border-block-end: 1px solid var(--border-subtle); padding: .75rem .85rem; }
@@ -522,27 +528,21 @@
   .admin-category-table-wrap,
   .admin-product-table-wrap,
   .admin-inventory-table-wrap,
-  .admin-orders-table-wrap,
-  .admin-order-items-table-wrap { overflow: visible; border: 0; background: transparent; box-shadow: none; }
+  .admin-orders-table-wrap { overflow: visible; border: 0; background: transparent; box-shadow: none; }
+  .admin-order-items-table-wrap { max-inline-size: 100%; overflow-x: auto; overscroll-behavior-inline: contain; }
   .admin-category-table,
   .admin-product-table,
   .admin-inventory-table,
-  .admin-orders-table,
-  .admin-order-items-table { display: block; inline-size: 100%; min-inline-size: 0; }
+  .admin-orders-table { display: block; inline-size: 100%; min-inline-size: 0; }
+  .admin-order-items-table { display: table; inline-size: 100%; min-inline-size: 34rem; table-layout: fixed; }
   .admin-category-table colgroup,
-  .admin-category-table thead,
-  .admin-order-items-table thead { display: none; }
-  .admin-category-table tbody,
-  .admin-order-items-table tbody { display: grid; gap: .8rem; }
-  .admin-category-table tbody tr,
-  .admin-order-items-table tbody tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: hidden; border: 1px solid var(--border-subtle); border-radius: .8rem; background: var(--surface-raised); }
-  .ui-table.admin-category-table tbody td,
-  .ui-table.admin-order-items-table tbody td { display: grid; min-inline-size: 0; align-content: center; gap: .3rem; border-block-end: 1px solid var(--border-subtle); padding: .75rem; text-align: start; white-space: normal; overflow-wrap: anywhere; }
-  .ui-table.admin-category-table tbody td::before,
-  .ui-table.admin-order-items-table tbody td::before { content: attr(data-label); color: var(--text-muted); font-size: .74rem; font-weight: 800; }
+  .admin-category-table thead { display: none; }
+  .admin-category-table tbody { display: grid; gap: .8rem; }
+  .admin-category-table tbody tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: hidden; border: 1px solid var(--border-subtle); border-radius: .8rem; background: var(--surface-raised); }
+  .ui-table.admin-category-table tbody td { display: grid; min-inline-size: 0; align-content: center; gap: .3rem; border-block-end: 1px solid var(--border-subtle); padding: .75rem; text-align: start; white-space: normal; overflow-wrap: anywhere; }
+  .ui-table.admin-category-table tbody td::before { content: attr(data-label); color: var(--text-muted); font-size: .74rem; font-weight: 800; }
   .admin-category-table tbody td:nth-child(2),
-  .admin-category-table tbody td:last-child,
-  .admin-order-items-table tbody td:first-child { grid-column: 1 / -1; }
+  .admin-category-table tbody td:last-child { grid-column: 1 / -1; }
   .admin-category-description { max-block-size: none; overflow: visible; }
 
   .admin-content .store-table-wrap { overflow: visible; border: 0; background: transparent; }
@@ -584,10 +584,8 @@
   .admin-product-table tbody tr,
   .admin-inventory-table tbody tr,
   .admin-orders-table tbody tr,
-  .admin-order-items-table tbody tr,
   .admin-content .store-table tbody tr { grid-template-columns: minmax(0, 1fr); }
   .admin-category-table tbody td,
-  .admin-order-items-table tbody td,
   .admin-product-table tbody td,
   .admin-inventory-table tbody td,
   .admin-orders-table tbody td,

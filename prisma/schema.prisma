@@ -363,6 +363,7 @@ model OrderItem {
   orderId             String
   skuId               String?
   productNameSnapshot String
+  productImageSnapshot String? @db.Text
   skuCodeSnapshot     String
   variantSnapshot     Json?
   unitPrice           Decimal  @db.Decimal(12, 2)
