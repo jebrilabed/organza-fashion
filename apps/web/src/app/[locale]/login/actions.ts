@@ -5,6 +5,7 @@ import { signIn } from "@/auth";
 import type { LoginState } from "@/lib/auth/types";
 import { prisma } from "@/lib/db/prisma";
 import { normalizeAccountPhone } from "@/lib/auth/phone.mjs";
+import { diagnoseDatabaseError } from "@/lib/db/database-error.mjs";
 
 const invalidCredentialsMessage = "تعذر تسجيل الدخول. تحقق من البيانات وحاول مرة أخرى.";
 
@@ -34,6 +35,16 @@ export async function loginAction(_previousState: LoginState, formData: FormData
     });
   } catch (error) {
     if (error instanceof AuthError) return { error: invalidCredentialsMessage };
+    const diagnosis = diagnoseDatabaseError(error);
+    if (diagnosis.isDatabaseError) {
+      console.error("Login database check failed:", {
+        code: diagnosis.code,
+        category: diagnosis.category,
+        summary: diagnosis.summary,
+        detail: diagnosis.detail,
+      });
+      return { error: diagnosis.formattedMessage };
+    }
     throw error;
   }
 

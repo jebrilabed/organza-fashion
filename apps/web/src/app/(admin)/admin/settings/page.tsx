@@ -7,7 +7,8 @@ import { adminMessages } from "@/lib/admin/messages";
 import { phase7Messages as messages } from "@/lib/phase7/messages";
 import { storefrontMessages } from "@/lib/storefront/messages";
 import { brandedText } from "@/lib/seo/site-data";
-import { readDeliveryZones } from "@/lib/phase7/validation.mjs";
+import { readDeliveryZones, readHomeEditorialCopy, readHomeEditorialImages } from "@/lib/phase7/validation.mjs";
+import { DatabaseStatusCard } from "./database-status-card";
 
 export default async function StoreSettingsPage() {
   await requireAdminPage();
@@ -31,6 +32,8 @@ export default async function StoreSettingsPage() {
     bankAccountNumber: bankValue("accountNumber"),
     bankIban: bankValue("iban"),
     deliveryZones,
+    homeEditorialCopy: readHomeEditorialCopy(configuration.homeEditorialCopy),
+    homeEditorialImages: readHomeEditorialImages(configuration.homeEditorialImages),
   };
 
   return (
@@ -38,6 +41,7 @@ export default async function StoreSettingsPage() {
       <header className="admin-page__header">
         <div><h1>{messages.ar.settingsTitle}</h1><p>{messages.ar.settingsDescription}</p></div>
       </header>
+      <DatabaseStatusCard />
       <Card>
         <SettingsForm values={formValues} />
         <p className="mt-5 text-sm text-slate-600">{messages.ar.settingsHint}</p>

@@ -12,6 +12,7 @@ import { createOrderFromCart, StorefrontOperationError } from "@/lib/storefront/
 import { checkoutOwnerBinding, verifyCheckoutAttemptToken } from "@/lib/storefront/checkout-security.mjs";
 import { storefrontMessages as messages } from "@/lib/storefront/messages";
 import { getBankTransferDetails } from "@/lib/storefront/payment-settings";
+import { diagnoseDatabaseError } from "@/lib/db/database-error.mjs";
 
 const textField = (data: FormData, field: string) => {
   const value = data.get(field);
@@ -236,18 +237,16 @@ export async function submitCheckoutAction(_previousState: CheckoutActionState, 
     }
     // Next redirects are thrown control-flow errors and must pass through untouched.
     if (error && typeof error === "object" && "digest" in error) throw error;
-    const errorRecord = error && typeof error === "object" ? error as Record<string, unknown> : {};
-    const cause = errorRecord.cause && typeof errorRecord.cause === "object"
-      ? errorRecord.cause as Record<string, unknown>
-      : {};
+    const diagnosis = diagnoseDatabaseError(error);
     console.error("Checkout order creation failed.", {
       stage: checkoutStage,
-      name: typeof errorRecord.name === "string" ? errorRecord.name : "unknown",
-      code: typeof errorRecord.code === "string" ? errorRecord.code : "unknown",
-      causeName: typeof cause.name === "string" ? cause.name : "unknown",
-      causeCode: typeof cause.code === "string" ? cause.code : "unknown",
+      code: diagnosis.code,
+      category: diagnosis.category,
+      summary: diagnosis.summary,
+      detail: diagnosis.detail,
+      technicalMessage: diagnosis.technicalMessage,
     });
-    return { error: messages.ar.databaseUnavailable, values: checkoutValues };
+    return { error: diagnosis.formattedMessage || messages.ar.databaseUnavailable, values: checkoutValues };
   }
   return { error: messages.ar.genericError, values: checkoutValues };
 }

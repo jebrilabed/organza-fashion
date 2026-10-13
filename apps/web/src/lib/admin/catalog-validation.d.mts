@@ -20,6 +20,8 @@ type ProductInput = {
   categoryId: string | null;
   price: string;
   compareAtPrice: string | null;
+  availability: "AVAILABLE" | "IN_TRANSIT";
+  shippingDurationDays: number | null;
   stockQuantity: number;
   imageUrls: string[];
   uploadedImages: { url: string; publicId: string; colorName?: string }[];

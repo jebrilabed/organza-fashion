@@ -34,6 +34,8 @@ export type ProductFormValues = {
   price: string;
   compareAtPrice: string;
   stockQuantity: number;
+  availability: "AVAILABLE" | "IN_TRANSIT";
+  shippingDurationDays: number | null;
   categoryId: string;
   imageUrls: string[];
   isActive: boolean;
@@ -195,6 +197,8 @@ export function ProductForm({
     isActive: values.isActive,
   }));
   const [hasVariants, setHasVariants] = useState(values.hasVariants ?? false);
+  const [availability, setAvailability] = useState(values.availability);
+  const [shippingDurationDays, setShippingDurationDays] = useState(values.shippingDurationDays ? String(values.shippingDurationDays) : "");
   const [uploadedImages, setUploadedImages] = useState<UploadedImageWithColor[]>([]);
   const [primaryImagePublicId, setPrimaryImagePublicId] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -266,6 +270,11 @@ export function ProductForm({
           <Input name="nameAr" label={messages.ar.productName} required maxLength={160} value={formValues.nameAr} onChange={(event) => setFormValues((current) => ({ ...current, nameAr: event.target.value }))} error={fieldError("nameAr")} />
           <Input name="price" label={messages.ar.price} required type="text" inputMode="decimal" dir="ltr" value={formValues.price} onChange={(event) => setFormValues((current) => ({ ...current, price: event.target.value }))} error={fieldError("price")} />
           <Input name="compareAtPrice" label={messages.ar.compareAtPrice} type="text" inputMode="decimal" dir="ltr" value={formValues.compareAtPrice} onChange={(event) => setFormValues((current) => ({ ...current, compareAtPrice: event.target.value }))} error={fieldError("compareAtPrice")} />
+          <Select name="availability" label="حالة التوفر" value={availability} onChange={(event) => setAvailability(event.target.value as ProductFormValues["availability"])} error={fieldError("availability")}>
+            <option value="AVAILABLE">متوفر</option>
+            <option value="IN_TRANSIT">قيد الشحن</option>
+          </Select>
+          {availability === "IN_TRANSIT" && <Input name="shippingDurationDays" label="مدة الشحن المتوقعة (بالأيام)" required type="number" min="1" max="365" step="1" inputMode="numeric" value={shippingDurationDays} onChange={(event) => setShippingDurationDays(event.target.value)} error={fieldError("shippingDurationDays")} />}
           {!hasVariants && (
             <Input name="stockQuantity" label={messages.ar.stock} required type="number" min="0" max="999999999" step="1" inputMode="numeric" value={formValues.stockQuantity} onChange={(event) => setFormValues((current) => ({ ...current, stockQuantity: event.target.value }))} error={fieldError("stockQuantity")} />
           )}

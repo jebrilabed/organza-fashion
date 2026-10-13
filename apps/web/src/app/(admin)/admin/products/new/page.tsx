@@ -13,7 +13,7 @@ export default async function NewProductPage() {
   });
   const values: ProductFormValues = {
     nameAr: "", nameEn: "", slug: "", descriptionAr: "", descriptionEn: "", seoTitleAr: "", seoDescriptionAr: "", seoTitleEn: "", seoDescriptionEn: "", price: "", compareAtPrice: "",
-    stockQuantity: 0, categoryId: "", imageUrls: [], isActive: true,
+    stockQuantity: 0, availability: "AVAILABLE", shippingDurationDays: null, categoryId: "", imageUrls: [], isActive: true,
   };
   return <div className="admin-page"><header className="admin-page__header"><div><h1>{messages.ar.addProduct}</h1><p>{messages.ar.createProductTitle}</p></div><Link className="ui-button ui-button--ghost" href="/admin/products">{messages.ar.back}</Link></header><ProductForm values={values} categories={categories.map((category) => ({ id: category.id, name: category.translations[0]?.name ?? category.slug }))} /></div>;
 }

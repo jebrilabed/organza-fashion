@@ -46,6 +46,21 @@ test("product validation rejects compare-at values below price and non-HTTPS ima
   assert.equal(parsed.errors.imageUrls, "invalidImageUrl");
 });
 
+test("product availability requires a valid delivery duration when in transit", () => {
+  const inTransit = parseProductInput(form({ ...validProduct, availability: "IN_TRANSIT", shippingDurationDays: "7" }));
+  assert.equal(inTransit.ok, true);
+  assert.equal(inTransit.value.availability, "IN_TRANSIT");
+  assert.equal(inTransit.value.shippingDurationDays, 7);
+
+  assert.equal(parseProductInput(form({ ...validProduct, availability: "IN_TRANSIT", shippingDurationDays: "" })).errors.shippingDurationDays, "invalidShippingDuration");
+  assert.equal(parseProductInput(form({ ...validProduct, availability: "IN_TRANSIT", shippingDurationDays: "366" })).errors.shippingDurationDays, "invalidShippingDuration");
+  assert.equal(parseProductInput(form({ ...validProduct, availability: "UNKNOWN" })).errors.availability, "invalidAvailability");
+
+  const available = parseProductInput(form({ ...validProduct, availability: "AVAILABLE", shippingDurationDays: "7" }));
+  assert.equal(available.ok, true);
+  assert.equal(available.value.shippingDurationDays, null);
+});
+
 test("category validation requires a trimmed name and valid slug", () => {
   const valid = parseCategoryInput(form({ nameAr: " فساتين ", slug: "dresses", isActive: "on" }));
   assert.equal(valid.ok, true);

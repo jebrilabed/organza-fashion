@@ -43,7 +43,10 @@ call the web application, not FastAPI. The AI service has no PostgreSQL connecti
 
 | Service | Variable | Required when | Notes |
 |---|---|---|---|
-| Web | `DATABASE_URL` | Always | Managed PostgreSQL URL. Use the provider's TLS instructions; URL-encode reserved characters in credentials. |
+| Web | `DATABASE_URL` | Always | Managed PostgreSQL URL. Use the provider's TLS instructions; URL-encode reserved characters in credentials. Vercel automatically switches Supabase session-pooler URLs from port 5432 to transaction pooler 6543. For migrations, configure `DIRECT_URL` when the provider offers a direct endpoint. |
+| Web | `DATABASE_SSL_MODE`, `DATABASE_SSL_ROOT_CERT` | Optional | Remote URLs require TLS by default. Set a readable root CA certificate path to enable `verify-full`; local loopback URLs remain unchanged. Remote TLS cannot be disabled. |
+| Web | `DATABASE_POOL_MAX` | Optional | Per-process pool limit; defaults to 1 on Vercel/serverless and 5 elsewhere. Tune against the database provider's total connection limit. |
+| Web | `DATABASE_CONNECTION_TIMEOUT_MS`, `DATABASE_IDLE_TIMEOUT_MS`, `DATABASE_QUERY_TIMEOUT_MS` | Optional | Pool connection, idle, and query timeouts; bounded defaults are applied when unset or invalid. |
 | Web | `AUTH_SECRET` | Always | Random secret of at least 32 characters. Auth.js infers the host from the trusted platform; this code does not require a separate `AUTH_URL`. |
 | Web | `SITE_URL` | Always | Public canonical HTTPS origin; no path, query, credentials, localhost, or loopback address. |
 | Web | `AI_SERVICE_URL` | To enable assistant | Deployed AI service origin, without the chat route suffix. |
@@ -102,9 +105,9 @@ the audit log. Do not store these temporary values in project environment files.
 
 ## Health and SEO behavior
 
-- Web: `GET /api/health` validates environment configuration and returns 503 when it
-  is incomplete. It reports whether `DATABASE_URL` is configured; it does not connect
-  to PostgreSQL.
+- Web: `GET /api/health` validates environment configuration and performs `SELECT 1`
+  against PostgreSQL. It returns 503 when configuration is incomplete or the database
+  cannot be reached; it never returns credentials or raw driver errors.
 - AI liveness: `GET /health/live` reports whether the process responds.
 - AI readiness: `GET /health/ready` checks that the internal token, Gemini key, and
   model name are present. It does not call Gemini or the web tool endpoint and does

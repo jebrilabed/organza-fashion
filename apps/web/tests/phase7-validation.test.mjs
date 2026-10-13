@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseAddress, parseDeliveryZones, parseImage, parseRegistration, parseSku, parseStoreSettings, readDeliveryZones, supportedCurrencies } from "../src/lib/phase7/validation.mjs";
+import { defaultHomeEditorialCopy, parseAddress, parseDeliveryZones, parseHomeEditorialCopy, parseHomeEditorialImages, parseImage, parseRegistration, parseSku, parseStoreSettings, readDeliveryZones, readHomeEditorialCopy, supportedCurrencies } from "../src/lib/phase7/validation.mjs";
 import { checkEnvironment } from "../src/lib/config/environment-readiness.mjs";
 import { parseCategoryInput, parseProductInput } from "../src/lib/admin/catalog-validation.mjs";
 
@@ -41,6 +41,22 @@ test("store settings always use Israeli shekels and Arabic locale", () => {
   assert.equal(parseStoreSettings(form({ ...base, currency: "BAD" })).value.currency, "ILS");
   assert.equal(parseStoreSettings(form({ ...base, currency: "ILS" })).value.currency, "ILS");
   assert.deepEqual(supportedCurrencies, ["SAR", "USD", "EUR", "ILS", "JOD"]);
+});
+
+test("homepage editorial images accept only bounded, unique Cloudinary uploads", () => {
+  const first = { url: "https://res.cloudinary.com/demo/image/upload/v1/farasha/products/550e8400-e29b-41d4-a716-446655440000.jpg", providerPublicId: "farasha/products/550e8400-e29b-41d4-a716-446655440000" };
+  const second = { url: "https://res.cloudinary.com/demo/image/upload/v1/farasha/products/550e8400-e29b-41d4-a716-446655440001.jpg", providerPublicId: "farasha/products/550e8400-e29b-41d4-a716-446655440001" };
+  assert.deepEqual(parseHomeEditorialImages(form({ homeEditorialImages: JSON.stringify([first, second]) })), { ok: true, value: [first, second] });
+  assert.equal(parseHomeEditorialImages(form({ homeEditorialImages: JSON.stringify([{ ...first, url: first.url.replace("https:", "http:") }]) })).ok, false);
+  assert.equal(parseHomeEditorialImages(form({ homeEditorialImages: JSON.stringify([first, first]) })).ok, false);
+  assert.equal(parseHomeEditorialImages(form({ homeEditorialImages: JSON.stringify(Array(9).fill(first)) })).ok, false);
+});
+
+test("homepage editorial copy defaults to current text and validates admin edits", () => {
+  const copy = { eyebrow: "من دار organza fashion", title: "تفاصيل جديدة", description: "وصف القسم", ctaLabel: "تسوقي الآن" };
+  assert.deepEqual(readHomeEditorialCopy(null), defaultHomeEditorialCopy);
+  assert.deepEqual(parseHomeEditorialCopy(form({ homeEditorialEyebrow: copy.eyebrow, homeEditorialTitle: copy.title, homeEditorialDescription: copy.description, homeEditorialCtaLabel: copy.ctaLabel })), { ok: true, value: copy });
+  assert.equal(parseHomeEditorialCopy(form({ homeEditorialTitle: "x".repeat(161) })).ok, false);
 });
 
 test("delivery zones normalize prices and reject duplicate or invalid rows", () => {

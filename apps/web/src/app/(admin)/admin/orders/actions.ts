@@ -2,11 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { NotificationStatus, OrderStatus, PaymentStatus } from "@/generated/prisma/enums";
+import { ExchangeRequestStatus, NotificationStatus, OrderStatus, PaymentStatus } from "@/generated/prisma/enums";
 import { Prisma } from "@/generated/prisma/client";
 import { AuthorizationDeniedError, AuthenticationRequiredError, requireAdmin } from "@/lib/auth/authorization";
 import { prisma } from "@/lib/db/prisma";
 import { changeOrderStatus, StorefrontOperationError } from "@/lib/storefront/orders";
+import { diagnoseDatabaseError } from "@/lib/db/database-error.mjs";
 
 class OrderDeletionError extends Error {
   constructor(readonly notice: "deleteMissingSku" | "deleteRestockUnavailable") {
@@ -27,10 +28,16 @@ function safeOrdersListReturnPath(value: FormDataEntryValue | null) {
   }
 }
 
-function orderStatusDestination(orderId: string, notice: string, returnTo: string | null) {
-  if (!returnTo) return `/admin/orders/${encodeURIComponent(orderId)}?notice=${notice}`;
+function orderStatusDestination(orderId: string, notice: string, returnTo: string | null, errorMsg?: string) {
+  if (!returnTo) {
+    const url = new URL(`/admin/orders/${encodeURIComponent(orderId)}`, "https://organza.invalid");
+    url.searchParams.set("notice", notice);
+    if (errorMsg) url.searchParams.set("errorMsg", errorMsg);
+    return `${url.pathname}${url.search}`;
+  }
   const url = new URL(returnTo, "https://organza.invalid");
   url.searchParams.set("notice", notice);
+  if (errorMsg) url.searchParams.set("errorMsg", errorMsg);
   return `${url.pathname}${url.search}`;
 }
 
@@ -43,6 +50,7 @@ export async function updateOrderStatusAction(formData: FormData) {
   }
 
   let notice = "updated";
+  let errorMessage: string | undefined;
   try {
     const admin = await requireAdmin();
     const result = await changeOrderStatus(orderId, statusValue as OrderStatus, admin.id);
@@ -59,9 +67,16 @@ export async function updateOrderStatusAction(formData: FormData) {
     else if (error instanceof StorefrontOperationError && error.reason === "restock-unavailable") notice = "restockUnavailable";
     else if (error instanceof StorefrontOperationError && error.reason === "stock-unavailable") notice = "reserveUnavailable";
     else {
-      const code = error && typeof error === "object" && "code" in error ? String(error.code) : "unknown";
-      console.error("Admin order status update failed.", { code });
+      const diagnosis = diagnoseDatabaseError(error);
+      console.error("Admin order status update failed.", {
+        code: diagnosis.code,
+        category: diagnosis.category,
+        summary: diagnosis.summary,
+        detail: diagnosis.detail,
+        technicalMessage: diagnosis.technicalMessage,
+      });
       notice = "error";
+      errorMessage = diagnosis.formattedMessage;
     }
   }
   revalidatePath("/admin");
@@ -69,7 +84,7 @@ export async function updateOrderStatusAction(formData: FormData) {
   revalidatePath(`/admin/orders/${encodeURIComponent(orderId)}`);
   revalidatePath("/admin/inventory");
   revalidatePath("/ar/orders");
-  redirect(orderStatusDestination(orderId, notice, returnTo));
+  redirect(orderStatusDestination(orderId, notice, returnTo, errorMessage));
 }
 
 export async function updatePaymentStatusAction(formData: FormData) {
@@ -111,9 +126,16 @@ export async function updatePaymentStatusAction(formData: FormData) {
   } catch (error) {
     if (error instanceof AuthenticationRequiredError) redirect("/ar/login");
     if (error instanceof AuthorizationDeniedError) redirect("/admin/orders?notice=denied");
-    const code = error && typeof error === "object" && "code" in error ? String(error.code) : "unknown";
-    console.error("Admin order payment status update failed.", { code });
+    const diagnosis = diagnoseDatabaseError(error);
+    console.error("Admin order payment status update failed.", {
+      code: diagnosis.code,
+      category: diagnosis.category,
+      summary: diagnosis.summary,
+      detail: diagnosis.detail,
+      technicalMessage: diagnosis.technicalMessage,
+    });
     notice = "paymentUpdateFailed";
+    redirect(`/admin/orders/${encodeURIComponent(orderId)}?notice=${notice}&errorMsg=${encodeURIComponent(diagnosis.formattedMessage)}`);
   }
 
   if (notice === "paymentUpdated") {
@@ -124,6 +146,48 @@ export async function updatePaymentStatusAction(formData: FormData) {
     revalidatePath("/ar/orders/[orderNumber]", "page");
   }
   redirect(`/admin/orders/${encodeURIComponent(orderId)}?notice=${notice}`);
+}
+
+export async function updateExchangeRequestStatusAction(formData: FormData) {
+  const requestId = String(formData.get("requestId") ?? "").trim();
+  const statusValue = String(formData.get("status") ?? "").trim();
+  const allowedStatus = statusValue === ExchangeRequestStatus.APPROVED || statusValue === ExchangeRequestStatus.REJECTED || statusValue === ExchangeRequestStatus.COMPLETED;
+  if (!requestId || requestId.length > 64 || !allowedStatus) {
+    redirect("/admin/orders?notice=invalid");
+  }
+
+  const admin = await requireAdmin();
+  const nextStatus = statusValue as ExchangeRequestStatus;
+  const result = await prisma.$transaction(async (tx) => {
+    const request = await tx.exchangeRequest.findUnique({
+      where: { id: requestId },
+      select: { id: true, orderId: true, orderItemId: true, status: true },
+    });
+    if (!request) return { ok: false as const, reason: "not-found" as const };
+    const validTransition = request.status === ExchangeRequestStatus.PENDING && (nextStatus === ExchangeRequestStatus.APPROVED || nextStatus === ExchangeRequestStatus.REJECTED)
+      || request.status === ExchangeRequestStatus.APPROVED && nextStatus === ExchangeRequestStatus.COMPLETED;
+    if (!validTransition) return { ok: false as const, reason: "transition" as const };
+    const updated = await tx.exchangeRequest.updateMany({
+      where: { id: request.id, status: request.status },
+      data: { status: nextStatus, reviewedAt: new Date() },
+    });
+    if (updated.count !== 1) return { ok: false as const, reason: "transition" as const };
+    await tx.adminAuditLog.create({
+      data: {
+        actorUserId: admin.id,
+        action: "orders.exchange-request.update",
+        entityType: "ExchangeRequest",
+        entityId: request.id,
+        metadata: { orderId: request.orderId, orderItemId: request.orderItemId, from: request.status, to: nextStatus },
+      },
+    });
+    return { ok: true as const, orderId: request.orderId };
+  });
+  if (!result.ok) redirect(`/admin/orders?notice=${result.reason === "not-found" ? "exchangeNotFound" : "exchangeTransition"}`);
+  revalidatePath(`/admin/orders/${encodeURIComponent(result.orderId)}`);
+  revalidatePath("/admin/orders");
+  revalidatePath("/ar/orders");
+  redirect(`/admin/orders/${encodeURIComponent(result.orderId)}?notice=exchangeUpdated`);
 }
 
 export async function deleteOrderAction(formData: FormData) {

@@ -178,7 +178,7 @@ test("cron bearer secret check is constant-shape, strict, and rejects missing cr
 test("order transactions enqueue durable events without calling the provider in checkout", async () => {
   const source = await readFile(new URL("../src/lib/storefront/orders.ts", import.meta.url), "utf8");
   assert.match(source, /tx\.notificationOutbox\.create\(\{ data: createdNotification \}\)/);
-  assert.match(source, /tx\.notificationOutbox\.create\(\{ data: notification \}\)/);
+  assert.match(source, /tx\.notificationOutbox\.(?:create|createMany)\(\{ data: (?:\[notification\]|notification)/);
   assert.doesNotMatch(source, /dispatchWhatsAppNotifications|graph\.facebook\.com|fetch\(/);
 });
 

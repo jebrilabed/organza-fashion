@@ -6,10 +6,14 @@ import { formatMoney } from "@/lib/storefront/format";
 import { storefrontMessages as messages } from "@/lib/storefront/messages";
 import { addToCartAction } from "@/app/[locale]/(store)/actions";
 import { StorefrontSubmitButton } from "@/components/storefront/submit-button";
+import type { ProductAvailability } from "@/generated/prisma/enums";
+import { productAvailabilityLabel, productAvailabilityVariant } from "@/lib/storefront/product-availability";
 
 type ProductCardProps = {
   product: {
     slug: string;
+    availability: ProductAvailability;
+    shippingDurationDays: number | null;
     translations: { name: string; slug: string }[];
     images: { url: string; altText: string | null }[];
     category: { translations: { name: string }[] } | null;
@@ -42,7 +46,7 @@ export function ProductCard({ product, currency }: ProductCardProps) {
           <span className="store-product-card__no-image">{messages.ar.noImage}</span>
         )}
         <span className="store-product-card__badge-overlay">
-          <Badge variant={stock > 0 ? "success" : "error"}>{stock > 0 ? messages.ar.inStock : messages.ar.outOfStock}</Badge>
+          <Badge variant={productAvailabilityVariant(stock, product.availability)}>{productAvailabilityLabel(stock, product.availability, product.shippingDurationDays)}</Badge>
         </span>
       </Link>
       <div className="store-product-card__content">

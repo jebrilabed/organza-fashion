@@ -3,7 +3,7 @@ import { cache } from "react";
 import { siteConfig } from "@/lib/config/site";
 import { prisma } from "@/lib/db/prisma";
 import { Locale } from "@/generated/prisma/enums";
-import { storeCurrency } from "@/lib/phase7/validation.mjs";
+import { readHomeEditorialCopy, readHomeEditorialImages, storeCurrency } from "@/lib/phase7/validation.mjs";
 
 export type PublicSiteData = {
   name: string;
@@ -17,6 +17,8 @@ export type PublicSiteData = {
   instagramUrl: string | null;
   facebookUrl: string | null;
   address: string | null;
+  homeEditorialCopy: { eyebrow: string; title: string; description: string; ctaLabel: string };
+  homeEditorialImages: { url: string }[];
   currency: string | null;
   storeActive: boolean | null;
 };
@@ -76,15 +78,20 @@ export const getPublicSiteData = cache(async (): Promise<PublicSiteData> => {
     instagramUrl: null,
     facebookUrl: null,
     address: null,
+    homeEditorialCopy: readHomeEditorialCopy(null),
+    homeEditorialImages: [],
     currency: storeCurrency,
     storeActive: null,
   };
   try {
     const [settings, seo] = await Promise.all([
-      prisma.storeSettings.findUnique({ where: { id: "singleton" }, select: { storeName: true, description: true, email: true, whatsappNumber: true, instagramUrl: true, facebookUrl: true, address: true, isActive: true } }),
+      prisma.storeSettings.findUnique({ where: { id: "singleton" }, select: { storeName: true, description: true, email: true, whatsappNumber: true, instagramUrl: true, facebookUrl: true, address: true, configuration: true, isActive: true } }),
       prisma.storeSeoSettings.findUnique({ where: { locale: "AR" }, select: { description: true, defaultOgImageUrl: true } }),
     ]);
     const whatsappNumber = settings?.whatsappNumber?.trim() || null;
+    const configuration = settings?.configuration && typeof settings.configuration === "object" && !Array.isArray(settings.configuration)
+      ? settings.configuration as Record<string, unknown>
+      : null;
     return {
       name: siteConfig.name,
       storeName: settings?.storeName?.trim() || siteConfig.name,
@@ -97,6 +104,8 @@ export const getPublicSiteData = cache(async (): Promise<PublicSiteData> => {
       instagramUrl: publicSocialUrl(settings?.instagramUrl, "instagram.com"),
       facebookUrl: publicSocialUrl(settings?.facebookUrl, "facebook.com"),
       address: addressText(settings?.address),
+      homeEditorialCopy: readHomeEditorialCopy(configuration?.homeEditorialCopy),
+      homeEditorialImages: readHomeEditorialImages(configuration?.homeEditorialImages).map(({ url }) => ({ url })),
       currency: storeCurrency,
       storeActive: settings?.isActive ?? null,
     };

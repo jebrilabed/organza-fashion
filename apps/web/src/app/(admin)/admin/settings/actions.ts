@@ -4,9 +4,10 @@ import { Locale, Prisma } from "@/generated/prisma/client";
 import { requireAdmin } from "@/lib/auth/authorization";
 import { hashPassword, verifyPassword } from "@/lib/auth/password-hash.mjs";
 import { prisma } from "@/lib/db/prisma";
-import { parseStoreSettings } from "@/lib/phase7/validation.mjs";
+import { parseHomeEditorialCopy, parseHomeEditorialImages, parseStoreSettings } from "@/lib/phase7/validation.mjs";
 import { phase7Messages as messages } from "@/lib/phase7/messages";
 import { adminMessages } from "@/lib/admin/messages";
+import { diagnoseDatabaseError } from "@/lib/db/database-error.mjs";
 export type SettingsState = { error?: string; success?: string };
 export type PasswordState = { error?: string; success?: string };
 
@@ -32,8 +33,9 @@ export async function changeAdminPassword(_previous: PasswordState, formData: Fo
   let user;
   try {
     user = await prisma.user.findUnique({ where: { id: admin.id }, select: { passwordHash: true } });
-  } catch {
-    return { error: adminMessages.ar.passwordChangeFailed };
+  } catch (error) {
+    const diagnosis = diagnoseDatabaseError(error);
+    return { error: diagnosis.formattedMessage || adminMessages.ar.passwordChangeFailed };
   }
   if (!user?.passwordHash) return { error: adminMessages.ar.passwordChangeUnavailable };
   if (!(await verifyPassword(currentPassword, user.passwordHash))) {
@@ -43,8 +45,9 @@ export async function changeAdminPassword(_previous: PasswordState, formData: Fo
   let passwordHash: string;
   try {
     passwordHash = await hashPassword(newPassword);
-  } catch {
-    return { error: adminMessages.ar.passwordChangeFailed };
+  } catch (error) {
+    const diagnosis = diagnoseDatabaseError(error);
+    return { error: diagnosis.formattedMessage || adminMessages.ar.passwordChangeFailed };
   }
 
   try {
@@ -66,8 +69,9 @@ export async function changeAdminPassword(_previous: PasswordState, formData: Fo
       return true;
     });
     if (!updated) return { error: adminMessages.ar.currentPasswordIncorrect };
-  } catch {
-    return { error: adminMessages.ar.passwordChangeFailed };
+  } catch (error) {
+    const diagnosis = diagnoseDatabaseError(error);
+    return { error: diagnosis.formattedMessage || adminMessages.ar.passwordChangeFailed };
   }
 
   revalidatePath("/admin/settings");
@@ -78,7 +82,9 @@ export async function saveStoreSettings(_previous: SettingsState, formData: Form
   let admin;
   try { admin = await requireAdmin(); } catch { return { error: messages.ar.settingsUnauthorized }; }
   const parsed = parseStoreSettings(formData);
-  if (!parsed.ok) return { error: messages.ar.settingsInvalid };
+  const parsedHomeEditorialCopy = parseHomeEditorialCopy(formData);
+  const parsedHomeEditorialImages = parseHomeEditorialImages(formData);
+  if (!parsed.ok || !parsedHomeEditorialCopy.ok || !parsedHomeEditorialImages.ok) return { error: messages.ar.settingsInvalid };
   const { address, bankName, bankAccountName, bankAccountNumber, bankIban, deliveryZones, ...values } = parsed.value;
   try {
     await prisma.$transaction(async (tx) => {
@@ -89,6 +95,8 @@ export async function saveStoreSettings(_previous: SettingsState, formData: Form
       const configuration = {
         ...existingConfiguration,
         bankTransfer: { bankName, accountName: bankAccountName, accountNumber: bankAccountNumber, iban: bankIban },
+        homeEditorialCopy: parsedHomeEditorialCopy.value,
+        homeEditorialImages: parsedHomeEditorialImages.value as Prisma.InputJsonArray,
       } as Prisma.InputJsonObject;
       const existingShippingSettings = current?.shippingSettings && typeof current.shippingSettings === "object" && !Array.isArray(current.shippingSettings)
         ? current.shippingSettings as Prisma.InputJsonObject
@@ -102,12 +110,17 @@ export async function saveStoreSettings(_previous: SettingsState, formData: Form
         create: { id: "singleton", ...values, defaultLocale: Locale.AR, address: address ? { address } : Prisma.JsonNull, configuration, shippingSettings },
         update: { ...values, defaultLocale: Locale.AR, address: address ? { address } : Prisma.JsonNull, configuration, shippingSettings },
       });
-      await tx.adminAuditLog.create({ data: { actorUserId: admin.id, action: "settings.store.update", entityType: "StoreSettings", entityId: "singleton", metadata: { changedFields: Object.keys(parsed.value) } } });
+      await tx.adminAuditLog.create({ data: { actorUserId: admin.id, action: "settings.store.update", entityType: "StoreSettings", entityId: "singleton", metadata: { changedFields: [...Object.keys(parsed.value), "homeEditorialCopy", "homeEditorialImages"] } } });
     });
   } catch (error) {
-    const code = error && typeof error === "object" && "code" in error ? String(error.code) : "unknown";
-    console.error("Store settings save failed.", { code });
-    return { error: messages.ar.settingsFailed };
+    const diagnosis = diagnoseDatabaseError(error);
+    console.error("Store settings save failed.", {
+      code: diagnosis.code,
+      category: diagnosis.category,
+      summary: diagnosis.summary,
+      detail: diagnosis.detail,
+    });
+    return { error: diagnosis.formattedMessage || messages.ar.settingsFailed };
   }
   revalidatePath("/admin");
   revalidatePath("/admin/settings");

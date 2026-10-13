@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@/generated/prisma/client";
-import { CategoryStatus, Locale, OrderStatus, ProductKind, ProductStatus } from "@/generated/prisma/enums";
+import { CategoryStatus, Locale, OrderStatus, ProductAvailability, ProductKind, ProductStatus } from "@/generated/prisma/enums";
 import { requireAdmin } from "@/lib/auth/authorization";
 import { adminMessages } from "@/lib/admin/messages";
 import type { AdminActionState } from "@/lib/admin/config";
@@ -11,6 +11,8 @@ import { parseCategoryInput, parseInventoryInput, parseProductInput } from "@/li
 import { executeAdminMutation } from "@/lib/admin/execute-admin-mutation.mjs";
 import { prisma } from "@/lib/db/prisma";
 import { preservePublicSlug } from "@/lib/seo/slug-redirects";
+
+import { diagnoseDatabaseError } from "@/lib/db/database-error.mjs";
 
 type AdminActor = Awaited<ReturnType<typeof requireAdmin>>;
 const messages = adminMessages.ar;
@@ -23,6 +25,8 @@ const fieldMessage = (code: string) => {
     invalidSku: messages.validationInvalidSku,
     invalidMoney: messages.validationInvalidMoney,
     invalidStock: messages.validationInvalidStock,
+    invalidAvailability: "يرجى اختيار حالة توفر صحيحة.",
+    invalidShippingDuration: "مدة الشحن يجب أن تكون بين يوم و365 يومًا.",
     tooManyImages: messages.validationTooManyImages,
     invalidImageUrl: messages.validationInvalidImageUrl,
     comparePriceBelowPrice: messages.validationComparePriceBelowPrice,
@@ -40,11 +44,15 @@ async function runAdminAction(
     }
     return result.value;
   } catch (error) {
-    const code = error && typeof error === "object" && "code" in error ? String(error.code) : "unknown";
-    console.error("Admin catalog operation failed:", error);
-    if (code === "P2002") return { error: messages.uniqueConflict };
-    if (code === "P2003") return { error: messages.genericError };
-    return { error: messages.databaseUnavailable };
+    const diagnosis = diagnoseDatabaseError(error);
+    console.error("Admin catalog operation failed:", {
+      code: diagnosis.code,
+      category: diagnosis.category,
+      summary: diagnosis.summary,
+      detail: diagnosis.detail,
+      technicalMessage: diagnosis.technicalMessage,
+    });
+    return { error: diagnosis.formattedMessage || messages.databaseUnavailable };
   }
 }
 
@@ -178,6 +186,8 @@ export async function saveProduct(_previous: AdminActionState, formData: FormDat
       slug: input.slug,
       kind: productKind,
       status: existing?.status === ProductStatus.ARCHIVED && !input.isActive ? ProductStatus.ARCHIVED : productStatus(input.isActive),
+      availability: input.availability === "IN_TRANSIT" ? ProductAvailability.IN_TRANSIT : ProductAvailability.AVAILABLE,
+      shippingDurationDays: input.shippingDurationDays,
       categoryId: input.categoryId,
       seoTitle: input.seoTitleAr || null,
       seoDescription: input.seoDescriptionAr || null,

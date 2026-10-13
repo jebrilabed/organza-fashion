@@ -78,6 +78,8 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
     price: sku?.price.toString() ?? "0",
     compareAtPrice: sku?.compareAtPrice?.toString() ?? "",
     stockQuantity: product.skus.reduce((sum, s) => sum + s.stockQuantity, 0),
+    availability: product.availability,
+    shippingDurationDays: product.shippingDurationDays,
     categoryId: product.categoryId ?? "",
     imageUrls: product.images.map((image) => image.url),
     isActive: product.status === "ACTIVE",

@@ -1,12 +1,12 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { requireAdminPage } from "@/lib/auth/authorization";
-import { Badge, Card, Container } from "@/components/ui";
+import { Badge, Button, Card, Container, Select } from "@/components/ui";
 import { DeleteOrderForm } from "@/components/admin/delete-order-form";
 import { ToastMessage } from "@/components/ui/toast";
 import { SafeProductImage } from "@/components/storefront/safe-product-image";
 import { VariantOptionsDisplay } from "@/components/storefront/variant-options-display";
-import { OrderStatus, PaymentStatus } from "@/generated/prisma/enums";
+import { ExchangeRequestStatus, OrderStatus, PaymentStatus } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db/prisma";
 import { adminMessages } from "@/lib/admin/messages";
 import { availableAdminOrderStatuses } from "@/lib/storefront/order-workflow.mjs";
@@ -14,14 +14,14 @@ import { addressParts, formatMoney } from "@/lib/storefront/format";
 import { orderStatusLabel, paymentMethodLabel, paymentStatusLabel } from "@/lib/storefront/order-labels";
 import { storefrontMessages as messages } from "@/lib/storefront/messages";
 import { InlineStatusSelect } from "@/components/admin/order-status-select";
-import { updateOrderStatusAction, updatePaymentStatusAction } from "../actions";
+import { updateExchangeRequestStatusAction, updateOrderStatusAction, updatePaymentStatusAction } from "../actions";
 
 export default async function AdminOrderDetails({ params, searchParams }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ notice?: string }>;
+  searchParams: Promise<{ notice?: string; errorMsg?: string }>;
 }) {
   await requireAdminPage();
-  const [{ id }, { notice }] = await Promise.all([params, searchParams]);
+  const [{ id }, { notice, errorMsg }] = await Promise.all([params, searchParams]);
   const order = await prisma.order.findUnique({
     where: { id },
     select: {
@@ -31,6 +31,16 @@ export default async function AdminOrderDetails({ params, searchParams }: {
       paymentStatus: true,
       paymentMethod: true,
       paymentReceipt: { select: { orderId: true } },
+      exchangeRequests: { orderBy: { createdAt: "desc" }, select: {
+        id: true,
+        requestedQuantity: true,
+        reason: true,
+        invoiceConfirmed: true,
+        deliveryFeeAccepted: true,
+        status: true,
+        createdAt: true,
+        orderItem: { select: { productNameSnapshot: true } },
+      } },
       contactName: true,
       contactEmail: true,
       contactPhone: true,
@@ -84,8 +94,8 @@ export default async function AdminOrderDetails({ params, searchParams }: {
   return (
     <Container className="admin-content">
       <header className="admin-page-header"><div><p className="admin-eyebrow">{messages.ar.adminOrders}</p><h1 dir="ltr">{order.orderNumber}</h1><p><Badge>{orderStatusLabel(order.status)}</Badge></p></div><div className="admin-order-header-actions"><DeleteOrderForm orderId={order.id} label={adminText.deleteOrder} confirmMessage={adminText.deleteOrderConfirm} /><Link href="/admin/orders">{messages.ar.backToAdminOrders}</Link></div></header>
-      <ToastMessage cleanUrl message={notice === "updated" ? messages.ar.statusUpdated : notice === "paymentUpdated" ? messages.ar.paymentStatusUpdated : undefined} tone="success" />
-      <ToastMessage cleanUrl message={notice === "transition" ? messages.ar.invalidTransition : notice === "missingSku" ? messages.ar.missingSkuRestore : notice === "alreadyCancelled" ? messages.ar.alreadyCancelled : notice === "restockUnavailable" ? messages.ar.restockUnavailable : notice === "reserveUnavailable" ? messages.ar.reserveUnavailable : notice === "paymentInvalid" ? messages.ar.paymentStatusInvalid : notice === "paymentUpdateFailed" ? messages.ar.paymentStatusUpdateFailed : notice === "deleteMissingSku" ? adminText.orderDeleteMissingSku : notice === "deleteRestockUnavailable" ? adminText.orderDeleteRestockUnavailable : notice === "deleteNotificationProcessing" ? adminText.orderDeleteNotificationProcessing : notice === "deleteFailed" ? adminText.orderDeleteFailed : notice === "notFound" ? messages.ar.orderNotFound : notice && notice !== "updated" && notice !== "paymentUpdated" ? messages.ar.databaseUnavailable : undefined} tone="error" />
+      <ToastMessage cleanUrl message={notice === "updated" ? messages.ar.statusUpdated : notice === "paymentUpdated" ? messages.ar.paymentStatusUpdated : notice === "exchangeUpdated" ? "تم تحديث طلب التبديل." : undefined} tone="success" />
+      <ToastMessage cleanUrl message={errorMsg || (notice === "transition" ? messages.ar.invalidTransition : notice === "missingSku" ? messages.ar.missingSkuRestore : notice === "alreadyCancelled" ? messages.ar.alreadyCancelled : notice === "restockUnavailable" ? messages.ar.restockUnavailable : notice === "reserveUnavailable" ? messages.ar.reserveUnavailable : notice === "paymentInvalid" ? messages.ar.paymentStatusInvalid : notice === "paymentUpdateFailed" ? messages.ar.paymentStatusUpdateFailed : notice === "deleteMissingSku" ? adminText.orderDeleteMissingSku : notice === "deleteRestockUnavailable" ? adminText.orderDeleteRestockUnavailable : notice === "deleteNotificationProcessing" ? adminText.orderDeleteNotificationProcessing : notice === "deleteFailed" ? adminText.orderDeleteFailed : notice === "notFound" ? messages.ar.orderNotFound : notice && notice !== "updated" && notice !== "paymentUpdated" ? messages.ar.databaseUnavailable : undefined)} tone="error" />
       <div className="store-admin-order-info">
         <Card><h2>{messages.ar.customer}</h2><p>{order.contactName}</p><p dir="ltr">{order.contactPhone}</p>{order.contactEmail && <p dir="ltr">{order.contactEmail}</p>}</Card>
         <Card><h2>{messages.ar.addressInfo}</h2><p>{address.deliveryZoneName && <>{messages.ar.deliveryZoneLabel}: {address.deliveryZoneName}<br /></>}</p><p>{address.address}</p><p>{address.city}</p></Card>
@@ -118,6 +128,25 @@ export default async function AdminOrderDetails({ params, searchParams }: {
         </Card>
         <Card><h2>{messages.ar.customerNote}</h2><p>{order.customerNote || messages.ar.noNotes}</p></Card>
       </div>
+      {order.exchangeRequests.length > 0 && <Card>
+        <h2>طلبات التبديل</h2>
+        <div className="grid gap-4">
+          {order.exchangeRequests.map((request) => <section className="grid gap-2 border-b border-[var(--border-subtle)] pb-4 last:border-0" key={request.id}>
+            <h3>{request.orderItem.productNameSnapshot} × {request.requestedQuantity}</h3>
+            <p>السبب: {request.reason}</p>
+            <p>الفاتورة مؤكدة: {request.invoiceConfirmed ? "نعم" : "لا"} · رسوم التوصيل مقبولة: {request.deliveryFeeAccepted ? "نعم" : "لا"}</p>
+            <p>الحالة: {request.status === ExchangeRequestStatus.PENDING ? "قيد المراجعة" : request.status === ExchangeRequestStatus.APPROVED ? "تمت الموافقة" : request.status === ExchangeRequestStatus.REJECTED ? "مرفوض" : "مكتمل"}</p>
+            <p>{new Intl.DateTimeFormat("ar-SA", { dateStyle: "medium", timeStyle: "short" }).format(request.createdAt)}</p>
+            {(request.status === ExchangeRequestStatus.PENDING || request.status === ExchangeRequestStatus.APPROVED) && <form action={updateExchangeRequestStatusAction} className="admin-form__actions">
+              <input name="requestId" type="hidden" value={request.id} />
+              <Select label="تحديث حالة التبديل" name="status" defaultValue={request.status === ExchangeRequestStatus.PENDING ? "APPROVED" : "COMPLETED"}>
+                {request.status === ExchangeRequestStatus.PENDING ? <><option value="APPROVED">موافقة</option><option value="REJECTED">رفض</option></> : <option value="COMPLETED">إكمال التبديل</option>}
+              </Select>
+              <Button type="submit">حفظ الحالة</Button>
+            </form>}
+          </section>)}
+        </div>
+      </Card>}
       <Card className="admin-order-items-card">
         <h2>{messages.ar.orderedItems}</h2>
         <div className="ui-table-wrap admin-order-items-table-wrap" role="region" aria-label={messages.ar.orderedItems} tabIndex={0}>

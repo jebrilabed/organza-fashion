@@ -178,6 +178,7 @@ export async function createOrderFromCart({
             id: true,
             skuCode: true,
             price: true,
+            compareAtPrice: true,
             stockQuantity: true,
             isActive: true,
             variantOptions: true,
@@ -232,6 +233,7 @@ export async function createOrderFromCart({
         productImageSnapshot: colorImageUrl ?? sku.product.images[0]?.url ?? null,
         skuCodeSnapshot: sku.skuCode,
         variantSnapshot: sku.variantOptions ?? Prisma.JsonNull,
+        isSaleSnapshot: Boolean(sku.compareAtPrice?.greaterThan(sku.price)),
         unitPrice: sku.price,
         quantity,
         subtotal: lineTotal,
@@ -342,7 +344,7 @@ export async function changeOrderStatus(orderId: string, nextStatus: OrderStatus
 
     const updated = await tx.order.updateMany({
       where: { id: order.id, status: order.status },
-      data: { status: nextStatus },
+      data: { status: nextStatus, ...(nextStatus === OrderStatus.DELIVERED && order.status !== OrderStatus.DELIVERED ? { deliveredAt: new Date() } : {}) },
     });
     if (updated.count !== 1) {
       if (nextStatus === OrderStatus.CANCELLED) {

@@ -177,6 +177,9 @@ export function parseProductInput(formData) {
   const requestedPrimaryImagePublicId = text(formData.get("primaryImagePublicId"));
   const price = money(formData.get("price"), true, errors, "price");
   const compareAtPrice = money(formData.get("compareAtPrice"), false, errors, "compareAtPrice");
+  const availability = text(formData.get("availability")) || "AVAILABLE";
+  const shippingDurationRaw = text(formData.get("shippingDurationDays"));
+  const parsedShippingDuration = /^(?:[1-9]\d{0,2})$/.test(shippingDurationRaw) ? Number(shippingDurationRaw) : null;
   const stockRaw = text(formData.get("stockQuantity"));
   const stockQuantity = /^(0|[1-9]\d{0,8})$/.test(stockRaw) ? Number(stockRaw) : (formData.get("hasVariants") === "true" || formData.get("hasVariants") === "on" ? 0 : null);
   const imageResult = optionalHttpsUrls(formData.get("imageUrls"));
@@ -200,6 +203,8 @@ export function parseProductInput(formData) {
   if (seoDescriptionAr.length > 500) errors.seoDescriptionAr = "tooLong";
   if (seoTitleEn.length > 180) errors.seoTitleEn = "tooLong";
   if (seoDescriptionEn.length > 500) errors.seoDescriptionEn = "tooLong";
+  if (!new Set(["AVAILABLE", "IN_TRANSIT"]).has(availability)) errors.availability = "invalidAvailability";
+  if (availability === "IN_TRANSIT" && (!parsedShippingDuration || parsedShippingDuration > 365)) errors.shippingDurationDays = "invalidShippingDuration";
   if (!variantData.hasVariants && stockQuantity === null) errors.stockQuantity = "invalidStock";
   if (imageResult.error) errors.imageUrls = imageResult.error;
   if (imageAssetResult.error) errors.imageUrls = imageAssetResult.error;
@@ -228,6 +233,8 @@ export function parseProductInput(formData) {
       categoryId,
       price,
       compareAtPrice,
+      availability,
+      shippingDurationDays: availability === "IN_TRANSIT" ? parsedShippingDuration : null,
       stockQuantity: variantData.hasVariants ? variantData.variants.reduce((sum, v) => sum + v.stockQuantity, 0) : (stockQuantity ?? 0),
       imageUrls: imageResult.urls,
       uploadedImages,

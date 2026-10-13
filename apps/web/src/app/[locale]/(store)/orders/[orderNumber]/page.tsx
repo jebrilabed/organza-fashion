@@ -7,6 +7,9 @@ import { addressParts, formatMoney } from "@/lib/storefront/format";
 import { VariantOptionsDisplay } from "@/components/storefront/variant-options-display";
 import { orderStatusLabel, paymentMethodLabel, paymentStatusLabel } from "@/lib/storefront/order-labels";
 import { storefrontMessages as messages } from "@/lib/storefront/messages";
+import { ExchangeRequestStatus } from "@/generated/prisma/enums";
+import { checkExchangeEligibility } from "@/lib/storefront/exchange-policy.mjs";
+import { ExchangeRequestForm } from "@/components/storefront/exchange-request-form";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
@@ -19,6 +22,7 @@ export default async function MyOrderDetails({ params }: { params: Promise<{ ord
     select: {
       orderNumber: true,
       status: true,
+      deliveredAt: true,
       paymentStatus: true,
       paymentMethod: true,
       paymentReceipt: { select: { orderId: true } },
@@ -29,7 +33,16 @@ export default async function MyOrderDetails({ params }: { params: Promise<{ ord
       total: true,
       currency: true,
       shippingAddress: true,
-      items: { orderBy: { createdAt: "asc" }, select: { id: true, productNameSnapshot: true, variantSnapshot: true, unitPrice: true, quantity: true, subtotal: true } },
+      items: { orderBy: { createdAt: "asc" }, select: {
+        id: true,
+        productNameSnapshot: true,
+        variantSnapshot: true,
+        unitPrice: true,
+        quantity: true,
+        subtotal: true,
+        isSaleSnapshot: true,
+        exchangeRequests: { orderBy: { createdAt: "desc" }, select: { id: true, status: true, createdAt: true } },
+      } },
     },
   });
   if (!order) notFound();
@@ -59,6 +72,21 @@ export default async function MyOrderDetails({ params }: { params: Promise<{ ord
               </tr>)}</tbody>
             </table>
           </div>
+          {order.status === "DELIVERED" && <section className="mt-6 grid gap-5" aria-labelledby="exchange-request-heading">
+            <h2 id="exchange-request-heading">طلبات التبديل</h2>
+            {order.items.map((item) => {
+              const latestRequest = item.exchangeRequests[0];
+              const activeRequest = item.exchangeRequests.find((request) => request.status !== ExchangeRequestStatus.REJECTED);
+              const eligibility = checkExchangeEligibility({ orderStatus: order.status, deliveredAt: order.deliveredAt, isSaleItem: item.isSaleSnapshot });
+              return <div className="grid gap-3 border-b border-[var(--border-subtle)] pb-4" key={item.id}>
+                <h3>{item.productNameSnapshot}</h3>
+                {activeRequest ? <p className="store-muted">طلب التبديل: {activeRequest.status === ExchangeRequestStatus.PENDING ? "قيد المراجعة" : activeRequest.status === ExchangeRequestStatus.APPROVED ? "تمت الموافقة" : "اكتمل التبديل"}</p>
+                  : eligibility.eligible ? <ExchangeRequestForm maxQuantity={item.quantity} orderItemId={item.id} />
+                    : <p className="store-muted">{eligibility.reason === "sale-item" ? "قطع العرض غير مشمولة بالتبديل." : "انتهت مهلة التبديل البالغة 12 ساعة من التسليم."}</p>}
+                {latestRequest?.status === ExchangeRequestStatus.REJECTED && <p className="store-alert">تم رفض طلب التبديل السابق. يمكنك تقديم طلب جديد ما دمت ضمن المهلة.</p>}
+              </div>;
+            })}
+          </section>}
           <p className="store-summary__row"><span>{messages.ar.subtotal}</span><strong>{formatMoney(order.subtotal, order.currency)}</strong></p>
           <p className="store-summary__row"><span>{messages.ar.shippingCost}</span><strong>{formatMoney(order.shippingCost, order.currency)}</strong></p>
           {order.discountTotal.greaterThan(0) && <p className="store-summary__row"><span>{messages.ar.fifthOrderDiscount}</span><strong>-{formatMoney(order.discountTotal, order.currency)}</strong></p>}

@@ -175,3 +175,66 @@ export function parseImage(data) {
     return { ok: true, value: { imageId, url: url.href, providerPublicId: providerPublicId || null } };
   } catch { return { ok: false }; }
 }
+
+function normalizeHomeEditorialImages(value) {
+  if (!Array.isArray(value) || value.length > 8) return null;
+  const seen = new Set();
+  const images = [];
+  for (const image of value) {
+    if (!image || typeof image !== "object" || Array.isArray(image)) return null;
+    const urlText = typeof image.url === "string" ? image.url.trim() : "";
+    const providerPublicId = typeof image.providerPublicId === "string" ? image.providerPublicId.trim() : "";
+    if (urlText.length > 2048 || !/^farasha\/products\/[0-9a-f-]{36}$/i.test(providerPublicId) || seen.has(providerPublicId)) return null;
+    try {
+      const url = new URL(urlText);
+      if (url.protocol !== "https:" || url.hostname !== "res.cloudinary.com" || url.username || url.password || !url.pathname.includes("/image/upload/") || !url.pathname.includes(`/${providerPublicId}`)) return null;
+      images.push({ url: url.href, providerPublicId });
+      seen.add(providerPublicId);
+    } catch {
+      return null;
+    }
+  }
+  return images;
+}
+
+export function readHomeEditorialImages(value) {
+  return normalizeHomeEditorialImages(value) ?? [];
+}
+
+export const defaultHomeEditorialCopy = {
+  eyebrow: "من دار organza fashion",
+  title: "تفاصيل تصنع حضوراً لا يُنسى",
+  description: "اكتشفي تصاميم تجمع بين أصالة الذوق وجمال الحرفة، واختاري القطعة التي تعبّر عنك.",
+  ctaLabel: "اكتشفي التصميم",
+};
+
+export function readHomeEditorialCopy(value) {
+  const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  return Object.fromEntries(Object.entries(defaultHomeEditorialCopy).map(([key, fallback]) => {
+    const candidate = source[key];
+    const maxLength = key === "description" ? 1000 : 160;
+    return [key, typeof candidate === "string" && candidate.length <= maxLength ? candidate : fallback];
+  }));
+}
+
+export function parseHomeEditorialCopy(data) {
+  const value = {
+    eyebrow: text(data.get("homeEditorialEyebrow")),
+    title: text(data.get("homeEditorialTitle")),
+    description: text(data.get("homeEditorialDescription")),
+    ctaLabel: text(data.get("homeEditorialCtaLabel")),
+  };
+  if (value.eyebrow.length > 160 || value.title.length > 160 || value.description.length > 1000 || value.ctaLabel.length > 160) return { ok: false };
+  return { ok: true, value };
+}
+
+export function parseHomeEditorialImages(data) {
+  const raw = data.get("homeEditorialImages");
+  if (typeof raw !== "string" || raw.length > 20000) return { ok: false };
+  try {
+    const images = normalizeHomeEditorialImages(JSON.parse(raw));
+    return images ? { ok: true, value: images } : { ok: false };
+  } catch {
+    return { ok: false };
+  }
+}

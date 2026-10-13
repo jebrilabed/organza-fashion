@@ -8,6 +8,7 @@ import type { AdminActionState } from "@/lib/admin/config";
 import { parseContentPageInput, parseFaqInput } from "@/lib/admin/content-validation.mjs";
 import { preservePublicSlug } from "@/lib/seo/slug-redirects";
 import { prisma } from "@/lib/db/prisma";
+import { diagnoseDatabaseError } from "@/lib/db/database-error.mjs";
 
 const invalid = "تحقق من الحقول المطلوبة وطول النص والرابط المختصر.";
 const denied = "لا تملك صلاحية لتعديل المحتوى العام.";
@@ -19,9 +20,14 @@ async function performAdminMutation(operation: (admin: Awaited<ReturnType<typeof
     if (!result.ok) return { error: result.reason === "unauthenticated" ? "يرجى تسجيل الدخول مرة أخرى." : denied };
     return result.value;
   } catch (error) {
-    const code = error && typeof error === "object" && "code" in error ? String(error.code) : "unknown";
-    console.error("Admin content mutation failed.", { code });
-    return { error: code === "P2002" ? "هذا الرابط أو مفتاح الصفحة مستخدم بالفعل." : unavailable };
+    const diagnosis = diagnoseDatabaseError(error);
+    console.error("Admin content mutation failed.", {
+      code: diagnosis.code,
+      category: diagnosis.category,
+      summary: diagnosis.summary,
+      detail: diagnosis.detail,
+    });
+    return { error: diagnosis.formattedMessage || unavailable };
   }
 }
 

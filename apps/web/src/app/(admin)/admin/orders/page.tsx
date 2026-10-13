@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireAdminPage } from "@/lib/auth/authorization";
 import { Button, Container, Input, Select } from "@/components/ui";
-import { OrderStatus, PaymentStatus } from "@/generated/prisma/enums";
+import { ExchangeRequestStatus, OrderStatus, PaymentStatus } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db/prisma";
 import { ADMIN_PAGE_SIZE } from "@/lib/admin/config";
 import { buildAdminOrderWhere, parseAdminOrderFilters } from "@/lib/admin/order-filters.mjs";
@@ -33,12 +33,16 @@ const notices: Record<string, string> = {
   restockUnavailable: messages.ar.restockUnavailable,
   reserveUnavailable: messages.ar.reserveUnavailable,
   deleted: adminMessages.ar.orderDeleted,
+  exchangeUpdated: "تم تحديث طلب التبديل.",
+  exchangeNotFound: "طلب التبديل غير موجود.",
+  exchangeTransition: "تعذر تغيير حالة طلب التبديل.",
 };
 
 export default async function AdminOrdersPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   await requireAdminPage();
   const params = await searchParams;
   const notice = Array.isArray(params.notice) ? params.notice[0] : params.notice;
+  const errorMsg = Array.isArray(params.errorMsg) ? params.errorMsg[0] : params.errorMsg;
   const filters = parseAdminOrderFilters(params, statusOptions, Object.values(PaymentStatus));
   const query = filters.query;
   const status = filters.status as OrderStatus | "";
@@ -51,7 +55,19 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * ADMIN_PAGE_SIZE,
       take: ADMIN_PAGE_SIZE,
-      select: { id: true, orderNumber: true, contactName: true, contactPhone: true, status: true, paymentStatus: true, total: true, currency: true, createdAt: true, updatedAt: true },
+      select: {
+        id: true,
+        orderNumber: true,
+        contactName: true,
+        contactPhone: true,
+        status: true,
+        paymentStatus: true,
+        total: true,
+        currency: true,
+        createdAt: true,
+        updatedAt: true,
+        exchangeRequests: { where: { status: ExchangeRequestStatus.PENDING }, select: { id: true } },
+      },
     }),
     prisma.order.count({ where }),
   ]);
@@ -74,7 +90,7 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
           <p className="admin-orders-header__count"><strong>{total}</strong> {messages.ar.orderCount}</p>
         </div>
       </header>
-      <ToastMessage cleanUrl message={notice ? notices[notice] : undefined} tone={notice === "updated" || notice === "deleted" ? "success" : "error"} />
+      <ToastMessage cleanUrl message={errorMsg || (notice ? notices[notice] : undefined)} tone={notice === "updated" || notice === "deleted" ? "success" : "error"} />
       <form aria-label={messages.ar.adminOrders} className="admin-orders-filters" method="get">
         <div className="admin-orders-filters__fields">
           <Input className="admin-orders-filters__search" defaultValue={query} label={messages.ar.searchOrders} maxLength={120} name="q" type="search" />
@@ -108,7 +124,7 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
                 ...nextStatuses.filter((s) => s !== order.status).map((s) => ({ value: s, label: orderStatusLabel(s) })),
               ];
               return <tr key={order.id}>
-              <td data-label={messages.ar.orderNumber}><span className="admin-orders-table__order"><Link className="admin-orders-table__number" dir="ltr" href={`/admin/orders/${encodeURIComponent(order.id)}`}>{order.orderNumber}</Link></span></td>
+              <td data-label={messages.ar.orderNumber}><span className="admin-orders-table__order"><Link className="admin-orders-table__number" dir="ltr" href={`/admin/orders/${encodeURIComponent(order.id)}`}>{order.orderNumber}</Link>{order.exchangeRequests.length > 0 && <Link className="ui-badge ui-badge--warning" href={`/admin/orders/${encodeURIComponent(order.id)}`}>تبديل جديد ({order.exchangeRequests.length})</Link>}</span></td>
               <td data-label={messages.ar.customer}><span className="admin-orders-table__customer"><strong>{order.contactName}</strong></span></td>
               <td data-label={adminMessages.ar.phoneNumber}><span className="admin-orders-table__phone" dir="ltr">{order.contactPhone}</span></td>
               <td data-label={messages.ar.total}><strong className="admin-orders-table__total">{formatMoney(order.total, order.currency)}</strong></td>

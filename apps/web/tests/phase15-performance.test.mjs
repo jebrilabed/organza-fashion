@@ -22,12 +22,13 @@ test("storefront product images use responsive delivery, preserve fallback, and 
   const image = source("../src/components/storefront/safe-product-image.tsx");
   const card = source("../src/components/storefront/product-card.tsx");
   const detail = source("../src/app/[locale]/(store)/products/[slug]/page.tsx");
+  const gallery = source("../src/components/storefront/product-gallery.tsx");
   assert.equal(image.startsWith('"use client"'), true);
   assert.match(image, /loading=\{priority \? "eager" : "lazy"\}/);
   assert.match(image, /loader=\{imageLoader\}/);
-  assert.match(image, /onError=\{\(\) => setFailed\(true\)\}/);
+  assert.match(image, /onError=\{\(\) => setFailed/);
   assert.doesNotMatch(card, /priority/);
-  assert.match(detail, /SafeProductImage[^\n]+priority/);
+  assert.match(detail + gallery, /SafeProductImage[\s\S]*?priority/);
 });
 
 test("the optional AI assistant is not mounted in the global storefront layout", () => {
@@ -69,9 +70,9 @@ test("catalog and admin listings keep server pagination limits", () => {
   assert.match(adminOrders, /take: ADMIN_PAGE_SIZE/);
   assert.match(dashboard, /take: 5,\s*select: \{\s*id: true,\s*slug: true,\s*status: true/);
   assert.doesNotMatch(dashboard, /take: 5,\s*include:/);
-  assert.match(adminProducts, /loader=\{cloudinaryImageLoader\}/);
-  assert.match(inventory, /loader=\{cloudinaryImageLoader\}/);
-  assert.match(productManagement, /loader=\{cloudinaryImageLoader\}/);
+  assert.match(adminProducts, /loader=\{cloudinaryImageLoader\}|AdminProductThumbnail/);
+  assert.match(inventory, /loader=\{cloudinaryImageLoader\}|AdminProductThumbnail/);
+  assert.match(productManagement, /loader=\{(?:cloudinaryImageLoader|productImageLoader)\}|AdminProductThumbnail/);
 });
 
 test("category breadcrumbs use one bounded recursive query instead of serial ancestor lookups", () => {

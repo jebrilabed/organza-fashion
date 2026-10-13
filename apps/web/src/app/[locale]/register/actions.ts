@@ -6,6 +6,8 @@ import { prisma } from "@/lib/db/prisma";
 import { parseRegistration } from "@/lib/phase7/validation.mjs";
 import { phase7Messages as messages } from "@/lib/phase7/messages";
 
+import { diagnoseDatabaseError } from "@/lib/db/database-error.mjs";
+
 export type RegistrationState = { error?: string; fieldErrors?: Record<string, string> };
 export async function registerCustomer(_previous: RegistrationState, formData: FormData): Promise<RegistrationState> {
   const parsed = parseRegistration(formData);
@@ -21,15 +23,17 @@ export async function registerCustomer(_previous: RegistrationState, formData: F
       select: { id: true },
     });
   } catch (error) {
-    const code = error && typeof error === "object"
-      ? "code" in error ? String(error.code) : "errorCode" in error ? String(error.errorCode) : "unknown"
-      : "unknown";
-    console.error("Customer registration failed.", { code });
-    if (code === "P2002") return { fieldErrors: { phone: "phoneAlreadyRegistered" } };
-    if (["P1000", "P1001", "P1002", "P1017", "P2024", "P2028"].includes(code)) {
-      return { error: messages.ar.registrationUnavailable };
+    const diagnosis = diagnoseDatabaseError(error);
+    console.error("Customer registration failed.", {
+      code: diagnosis.code,
+      category: diagnosis.category,
+      summary: diagnosis.summary,
+      detail: diagnosis.detail,
+    });
+    if (diagnosis.category === "CONSTRAINT_UNIQUE") {
+      return { fieldErrors: { phone: "phoneAlreadyRegistered" } };
     }
-    return { error: messages.ar.registrationFailed };
+    return { error: diagnosis.formattedMessage || messages.ar.registrationFailed };
   }
   redirect(formData.get("next") === "/ar/checkout" ? "/ar/login?registered=1&next=%2Far%2Fcheckout" : "/ar/login?registered=1");
 }

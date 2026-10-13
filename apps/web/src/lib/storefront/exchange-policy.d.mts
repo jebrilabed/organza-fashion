@@ -1,0 +1,4 @@
+export type ExchangeEligibility = { eligible: true; expiresAt: number } | { eligible: false; reason: "not-delivered" | "sale-item" | "outside-window" };
+export function checkExchangeEligibility(input: { orderStatus: string; deliveredAt: Date | string | number | null; isSaleItem: boolean }, now?: number): ExchangeEligibility;
+export type ParsedExchangeRequest = { orderItemId: string; quantity: number; reason: string; invoiceConfirmed: true; deliveryFeeAccepted: true };
+export function parseExchangeRequestInput(formData: FormData, maxQuantity: number): { ok: true; value: ParsedExchangeRequest } | { ok: false; errors: Record<string, string> };

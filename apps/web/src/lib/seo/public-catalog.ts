@@ -18,6 +18,8 @@ export const getPublishedProductBySlug = cache((slug: string) => prisma.product.
     id: true,
     seoTitle: true,
     seoDescription: true,
+    availability: true,
+    shippingDurationDays: true,
     categoryId: true,
     translations: { where: { locale: Locale.AR }, take: 1, select: { name: true, description: true, slug: true, seoTitle: true, seoDescription: true } },
     images: { orderBy: { sortOrder: "asc" }, select: { url: true, altText: true } },

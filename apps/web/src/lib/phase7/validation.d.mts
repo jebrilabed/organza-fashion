@@ -12,3 +12,10 @@ export function parseStoreSettings(data: FormData): { ok: true; value: ParsedSto
 export type ParsedSku = { id: string; skuCode: string; price: string; stockQuantity: number; variantOptions: Record<string, string | number | boolean>; isActive: boolean };
 export function parseSku(data: FormData): { ok: true; value: ParsedSku } | { ok: false; errors: Record<string, string> };
 export function parseImage(data: FormData): { ok: true; value: { imageId: string; url: string; providerPublicId: string | null } } | { ok: false };
+export type HomeEditorialImage = { url: string; providerPublicId: string };
+export function readHomeEditorialImages(value: unknown): HomeEditorialImage[];
+export function parseHomeEditorialImages(data: FormData): { ok: true; value: HomeEditorialImage[] } | { ok: false };
+export type HomeEditorialCopy = { eyebrow: string; title: string; description: string; ctaLabel: string };
+export const defaultHomeEditorialCopy: HomeEditorialCopy;
+export function readHomeEditorialCopy(value: unknown): HomeEditorialCopy;
+export function parseHomeEditorialCopy(data: FormData): { ok: true; value: HomeEditorialCopy } | { ok: false };

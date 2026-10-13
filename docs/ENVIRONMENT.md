@@ -34,10 +34,11 @@ Never place secrets in `NEXT_PUBLIC_*` variables. Do not commit `.env`, `.env.lo
 or any populated environment file. Production values belong in each hosting provider's
 secret configuration.
 Production web deployments must use a PostgreSQL URL, an `AUTH_SECRET` of at least 32
-characters, and a public canonical HTTPS `SITE_URL`. Auth.js infers its public host
+characters, and a public canonical HTTPS `SITE_URL`. Remote database URLs require TLS;
+serverless pools default to one connection per warm instance. Auth.js infers its public host
 from the trusted deployment host; this configuration does not require a separate
-`AUTH_URL`. The web health route reports environment configuration only; it does not
-prove database connectivity. Configure store currency under `/admin/settings` before accepting orders. See
+`AUTH_URL`. The web health route performs a live database readiness query and returns
+503 when PostgreSQL is unreachable. Configure store currency under `/admin/settings` before accepting orders. See
 [store configuration and accounts](STORE_CONFIGURATION_AND_ACCOUNTS.md).
 
 The web app sends `nosniff`, frame denial, a restrictive `base-uri`/`object-src`/

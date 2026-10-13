@@ -15,6 +15,7 @@ import { getPublicSiteData, type PublicCategoryCrumb } from "@/lib/seo/site-data
 import { buildBreadcrumbData, canonicalUrl } from "@/lib/seo/public-seo.mjs";
 import { SeoJsonLd, StoreBreadcrumbs } from "@/components/storefront/seo-json-ld";
 import { StorePolicies } from "@/components/storefront/product-variant-selector";
+import { HomeEditorialCarousel } from "@/components/storefront/home-editorial-carousel";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -76,6 +77,8 @@ export default async function StorefrontHome({ params, searchParams, categoryTra
       select: {
         slug: true,
         featured: true,
+        availability: true,
+        shippingDurationDays: true,
         translations: { where: { locale: Locale.AR }, take: 1, select: { name: true, slug: true } },
         images: { orderBy: { sortOrder: "asc" }, take: 1, select: { url: true, altText: true } },
         category: { select: { translations: { where: { locale: Locale.AR }, take: 1, select: { name: true } } } },
@@ -103,7 +106,8 @@ export default async function StorefrontHome({ params, searchParams, categoryTra
   const heroProduct = products.find((product) => product.featured && product.images[0]) ?? products.find((product) => product.images[0]) ?? null;
   const editorialProduct = products.find((product) => product.slug !== heroProduct?.slug && product.images[0]) ?? null;
   const editorialTranslation = editorialProduct?.translations[0];
-  const editorialImage = editorialProduct?.images[0];
+  const productMainImages = products.flatMap((product) => product.images[0] ? [{ url: product.images[0].url }] : []);
+  const editorialImages = Array.from(new Map((storeData.homeEditorialImages.length ? storeData.homeEditorialImages : productMainImages).map((image) => [image.url, image])).values()).slice(0, 8);
   const isHomeView = showHomeHero && !query && !categorySlug && page === 1 && categoryTrail.length === 0;
   const previousHref = `/ar?${new URLSearchParams({ ...(query ? { q: query } : {}), ...(categorySlug ? { category: categorySlug } : {}), page: String(page - 1) }).toString()}`;
   const nextHref = `/ar?${new URLSearchParams({ ...(query ? { q: query } : {}), ...(categorySlug ? { category: categorySlug } : {}), page: String(page + 1) }).toString()}`;
@@ -209,15 +213,15 @@ export default async function StorefrontHome({ params, searchParams, categoryTra
             }))}
           </nav>
         </section>}
-        {isHomeView && editorialProduct && editorialTranslation && editorialImage && <section aria-label="من روح organza fashion" className="store-home__editorial">
-          <Link aria-label={editorialTranslation.name} className="store-home__editorial-image" href={`/ar/products/${encodeURIComponent(editorialTranslation.slug)}`}>
-            <SafeProductImage alt={editorialImage.altText || editorialTranslation.name} sizes="(max-width: 700px) 100vw, 32vw" src={editorialImage.url} />
-          </Link>
+        {isHomeView && <section aria-label={storeData.homeEditorialCopy.title || "من روح organza fashion"} className="store-home__editorial">
+          <div className="store-home__editorial-image">
+            {editorialImages.length > 0 && <HomeEditorialCarousel images={editorialImages} />}
+          </div>
           <div className="store-home__editorial-copy">
-            <p>من دار organza fashion</p>
-            <h2>تفاصيل تصنع حضوراً لا يُنسى</h2>
-            <span>اكتشفي تصاميم تجمع بين أصالة الذوق وجمال الحرفة، واختاري القطعة التي تعبّر عنك.</span>
-            <Link href={`/ar/products/${encodeURIComponent(editorialTranslation.slug)}`}>اكتشفي التصميم <span aria-hidden="true">←</span></Link>
+            {storeData.homeEditorialCopy.eyebrow && <p>{storeData.homeEditorialCopy.eyebrow}</p>}
+            {storeData.homeEditorialCopy.title && <h2>{storeData.homeEditorialCopy.title}</h2>}
+            {storeData.homeEditorialCopy.description && <span>{storeData.homeEditorialCopy.description}</span>}
+            <Link href={editorialTranslation ? `/ar/products/${encodeURIComponent(editorialTranslation.slug)}` : "/ar/products"}>{storeData.homeEditorialCopy.ctaLabel} <span aria-hidden="true">←</span></Link>
           </div>
         </section>}
         <section className={isHomeView ? "store-home__section store-home__catalogue" : "store-catalogue"}>

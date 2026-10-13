@@ -6,7 +6,7 @@ export function VariantOptionsDisplay({ options }: { options: Prisma.JsonValue |
      const str = displayVariantOptions(options);
      return str ? <span>{str}</span> : null;
   }
-  const opts = options as Record<string, any>;
+  const opts = options as Record<string, string | undefined>;
   const color = opts["Color"];
   const colorHex = opts["ColorHex"];
   const size = opts["Size"];

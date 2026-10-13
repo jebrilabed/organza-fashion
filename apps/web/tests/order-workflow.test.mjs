@@ -7,6 +7,7 @@ import {
   parseCheckoutInput,
 } from "../src/lib/storefront/order-workflow.mjs";
 import { calculateFifthOrderDiscount } from "../src/lib/storefront/checkout-pricing.mjs";
+import { checkExchangeEligibility, parseExchangeRequestInput } from "../src/lib/storefront/exchange-policy.mjs";
 
 function validForm(overrides = {}) {
   const form = new FormData();
@@ -86,4 +87,26 @@ test("order transitions enforce a simple terminal cancellation and delivery life
   assert.equal(canTransitionOrder("DELIVERED", "CANCELLED"), false);
   assert.equal(canTransitionOrder("CANCELLED", "PENDING"), false);
   assert.deepEqual(allowedOrderTransitions("unknown"), []);
+});
+
+test("exchange requests are limited to nonsale delivered items within 12 hours", () => {
+  const deliveredAt = new Date("2026-10-13T08:00:00.000Z");
+  const twelveHoursLater = deliveredAt.getTime() + 12 * 60 * 60 * 1000;
+  assert.equal(checkExchangeEligibility({ orderStatus: "DELIVERED", deliveredAt, isSaleItem: false }, twelveHoursLater).eligible, true);
+  assert.deepEqual(checkExchangeEligibility({ orderStatus: "DELIVERED", deliveredAt, isSaleItem: false }, twelveHoursLater + 1), { eligible: false, reason: "outside-window" });
+  assert.deepEqual(checkExchangeEligibility({ orderStatus: "SHIPPED", deliveredAt, isSaleItem: false }, twelveHoursLater), { eligible: false, reason: "not-delivered" });
+  assert.deepEqual(checkExchangeEligibility({ orderStatus: "DELIVERED", deliveredAt, isSaleItem: true }, twelveHoursLater), { eligible: false, reason: "sale-item" });
+});
+
+test("exchange request requires a valid quantity, invoice, delivery fee acceptance, and reason", () => {
+  const form = new FormData();
+  form.set("orderItemId", "item_123");
+  form.set("quantity", "2");
+  form.set("reason", "المقاس غير مناسب");
+  form.set("invoiceConfirmed", "on");
+  form.set("deliveryFeeAccepted", "on");
+  assert.deepEqual(parseExchangeRequestInput(form, 3), { ok: true, value: { orderItemId: "item_123", quantity: 2, reason: "المقاس غير مناسب", invoiceConfirmed: true, deliveryFeeAccepted: true } });
+  form.delete("invoiceConfirmed");
+  assert.equal(parseExchangeRequestInput(form, 3).errors.invoiceConfirmed, "invoice-required");
+  assert.equal(parseExchangeRequestInput(form, 1).errors.quantity, "invalid-quantity");
 });

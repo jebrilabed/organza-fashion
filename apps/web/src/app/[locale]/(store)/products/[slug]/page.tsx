@@ -15,6 +15,7 @@ import { getPublicCategoryTrail, getPublicSiteData, ogImageFromImages } from "@/
 import { getPublishedProductBySlug } from "@/lib/seo/public-catalog";
 import { buildBreadcrumbData, buildProductStructuredData, canonicalUrl } from "@/lib/seo/public-seo.mjs";
 import { SeoJsonLd, StoreBreadcrumbs } from "@/components/storefront/seo-json-ld";
+import { productAvailabilityLabel, productAvailabilityVariant } from "@/lib/storefront/product-availability";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string; slug: string }> }): Promise<Metadata> {
   const { slug: routeSlug, locale } = await params;
@@ -100,7 +101,7 @@ export default async function ProductDetails({ params }: { params: Promise<{ loc
               {categoryTrail.at(-1)?.name && <p className="store-muted">{categoryTrail.at(-1)?.name}</p>}
               <h1>{translation.name}</h1>
               {minimumPrice && currency ? <div className="store-product-detail__price"><p className="store-price">{messages.ar.startingAt} {formatMoney(minimumPrice, currency)}</p>{minimumCompareAtPrice && <del aria-label={messages.ar.priceBeforeDiscount}>{formatMoney(minimumCompareAtPrice, currency)}</del>}</div> : <p className="store-muted">{messages.ar.currencyUnavailable}</p>}
-              <Badge variant={totalStock > 0 ? "success" : "error"}>{totalStock > 0 ? messages.ar.inStock : messages.ar.outOfStock}</Badge>
+              <Badge variant={productAvailabilityVariant(totalStock, product.availability)}>{productAvailabilityLabel(totalStock, product.availability, product.shippingDurationDays, true)}</Badge>
               {totalStock > 0 && totalStock <= 5 && <p className="store-muted">كمية محدودة</p>}
             </header>
             {translation.description && <section className="store-description"><h2>{messages.ar.description}</h2><p>{translation.description}</p></section>}
@@ -124,7 +125,7 @@ export default async function ProductDetails({ params }: { params: Promise<{ loc
                 totalStock={totalStock}
                 addToCartAction={addToCartAction}
               />
-            ) : <p className="store-alert">{purchasable.length ? messages.ar.currencyNotConfigured : messages.ar.outOfStock}</p>}
+            ) : <p className="store-alert">{purchasable.length ? messages.ar.currencyNotConfigured : messages.ar.soldOut}</p>}
           </div>
         </article>
       </Container>

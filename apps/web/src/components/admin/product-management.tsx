@@ -125,7 +125,7 @@ export function ProductManagement({ productId, images = [], colors = [], imageCo
   const [liveColors, setLiveColors] = useState(colors);
   
   useEffect(() => {
-    const handler = (e: any) => setLiveColors(e.detail);
+    const handler = (e: Event) => setLiveColors((e as CustomEvent<{ name: string; hex: string }[]>).detail);
     window.addEventListener('colorsChanged', handler);
     return () => window.removeEventListener('colorsChanged', handler);
   }, []);
