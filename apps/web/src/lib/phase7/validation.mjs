@@ -1,4 +1,13 @@
+import { normalizeAccountPhone } from "../auth/phone.mjs";
+
 const text = (value) => typeof value === "string" ? value.trim() : "";
+const normalizeLocalizedNumber = (value) => value
+  .replace(/[٠-٩۰-۹]/g, (digit) => {
+    const codePoint = digit.charCodeAt(0);
+    return String(codePoint >= 0x06f0 ? codePoint - 0x06f0 : codePoint - 0x0660);
+  })
+  .replace(/٫/g, ".")
+  .replace(/٬/g, "");
 export const supportedCurrencies = ["SAR", "USD", "EUR", "ILS", "JOD"];
 export const storeCurrency = "ILS";
 
@@ -6,7 +15,7 @@ const deliveryMoneyPattern = /^(?:0|[1-9]\d{0,9})(?:\.\d{1,2})?$/;
 
 function canonicalDeliveryPrice(value) {
   if (typeof value !== "string") return null;
-  const price = value.trim();
+  const price = normalizeLocalizedNumber(value.trim());
   if (!deliveryMoneyPattern.test(price)) return null;
   const [whole, fraction = ""] = price.split(".");
   return `${whole}.${fraction.padEnd(2, "0")}`;
@@ -46,31 +55,21 @@ export function readDeliveryZones(value) {
   return uniqueDeliveryZones(value) ?? [];
 }
 
-function normalizePhoneDigits(value) {
-  return value.replace(/[٠-٩۰-۹]/g, (digit) => {
-    const codePoint = digit.charCodeAt(0);
-    return String(codePoint >= 0x06f0 ? codePoint - 0x06f0 : codePoint - 0x0660);
-  });
-}
-
 export function parseRegistration(data) {
   const name = text(data.get("name"));
-  const email = text(data.get("email")).toLowerCase();
-  const phone = normalizePhoneDigits(text(data.get("phone"))).replace(/[\s().-]/g, "");
-  const phoneDigits = phone.replace(/\D/g, "").length;
+  const phone = normalizeAccountPhone(text(data.get("phone"))) ?? "";
   const addressLine = text(data.get("addressLine"));
   const city = text(data.get("city"));
   const password = typeof data.get("password") === "string" ? data.get("password") : "";
   const confirmation = typeof data.get("confirmation") === "string" ? data.get("confirmation") : "";
   const errors = {};
   if (!name || name.length > 120) errors.name = "invalidName";
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) errors.email = "invalidEmail";
-  if (!/^\d+$/.test(phone) || phoneDigits < 8 || phoneDigits > 15) errors.phone = "invalidPhone";
+  if (!phone) errors.phone = "invalidPhone";
   if (!addressLine || addressLine.length > 500) errors.addressLine = "invalidAddress";
   if (!city || city.length > 120) errors.city = "invalidCity";
   if (password.length < 8 || password.length > 128) errors.password = "invalidPassword";
   if (password !== confirmation) errors.confirmation = "passwordMismatch";
-  return Object.keys(errors).length ? { ok: false, errors } : { ok: true, value: { name, email, phone, addressLine, city, password } };
+  return Object.keys(errors).length ? { ok: false, errors } : { ok: true, value: { name, phone, addressLine, city, password } };
 }
 
 export function parseProfile(data) {
@@ -97,12 +96,25 @@ export function parseAddress(data) {
   return Object.keys(errors).length ? { ok: false, errors } : { ok: true, value };
 }
 
+function socialProfileUrl(value, domain) {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    const allowedHost = url.hostname === domain || url.hostname.endsWith(`.${domain}`);
+    return url.protocol === "https:" && !url.username && !url.password && allowedHost ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
 export function parseStoreSettings(data) {
   const parsedDeliveryZones = parseDeliveryZones(data);
   const value = {
     storeName: text(data.get("storeName")), description: text(data.get("description")) || null,
     currency: storeCurrency, contactPhone: text(data.get("contactPhone")) || null,
     whatsappNumber: text(data.get("whatsappNumber")) || null,
+    instagramUrl: text(data.get("instagramUrl")) || null,
+    facebookUrl: text(data.get("facebookUrl")) || null,
     bankName: text(data.get("bankName")), bankAccountName: text(data.get("bankAccountName")),
     bankAccountNumber: text(data.get("bankAccountNumber")), bankIban: text(data.get("bankIban")),
     email: text(data.get("email")).toLowerCase() || null, address: text(data.get("address")) || null,
@@ -114,6 +126,16 @@ export function parseStoreSettings(data) {
   if (value.description && value.description.length > 2000) errors.description = "tooLong";
   if (value.contactPhone && (value.contactPhone.length > 40 || !/^\+?[()\d\s.-]+$/.test(value.contactPhone))) errors.contactPhone = "invalidPhone";
   if (value.whatsappNumber && (value.whatsappNumber.length > 40 || !/^\+?[()\d\s.-]+$/.test(value.whatsappNumber))) errors.whatsappNumber = "invalidPhone";
+  if (value.instagramUrl) {
+    const validUrl = value.instagramUrl.length <= 500 ? socialProfileUrl(value.instagramUrl, "instagram.com") : null;
+    if (!validUrl) errors.instagramUrl = "invalidSocialUrl";
+    else value.instagramUrl = validUrl;
+  }
+  if (value.facebookUrl) {
+    const validUrl = value.facebookUrl.length <= 500 ? socialProfileUrl(value.facebookUrl, "facebook.com") : null;
+    if (!validUrl) errors.facebookUrl = "invalidSocialUrl";
+    else value.facebookUrl = validUrl;
+  }
   if (value.bankName.length > 120 || value.bankAccountName.length > 120 || value.bankAccountNumber.length > 64 || value.bankIban.length > 64) errors.bankDetails = "tooLong";
   if (value.email && (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.email) || value.email.length > 254)) errors.email = "invalidEmail";
   if (value.address && value.address.length > 500) errors.address = "tooLong";
@@ -125,7 +147,7 @@ export function parseStoreSettings(data) {
 export function parseSku(data) {
   const id = text(data.get("skuId"));
   const skuCode = text(data.get("skuCode"));
-  const price = text(data.get("price"));
+  const price = normalizeLocalizedNumber(text(data.get("price")));
   const stockRaw = text(data.get("stockQuantity"));
   const optionsRaw = text(data.get("variantOptions"));
   const errors = {};

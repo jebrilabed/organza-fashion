@@ -14,6 +14,8 @@ export type PublicSiteData = {
   email: string | null;
   phone: string | null;
   whatsappNumber: string | null;
+  instagramUrl: string | null;
+  facebookUrl: string | null;
   address: string | null;
   currency: string | null;
   storeActive: boolean | null;
@@ -43,6 +45,17 @@ function publicHttpsUrl(value: string | null | undefined): string | null {
   }
 }
 
+function publicSocialUrl(value: string | null | undefined, domain: string): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    const allowedHost = url.hostname === domain || url.hostname.endsWith(`.${domain}`);
+    return url.protocol === "https:" && !url.username && !url.password && allowedHost ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 export function brandedText(value: string | null | undefined): string | null {
   const text = value?.trim();
   if (!text) return null;
@@ -60,13 +73,15 @@ export const getPublicSiteData = cache(async (): Promise<PublicSiteData> => {
     email: null,
     phone: null,
     whatsappNumber: null,
+    instagramUrl: null,
+    facebookUrl: null,
     address: null,
     currency: storeCurrency,
     storeActive: null,
   };
   try {
     const [settings, seo] = await Promise.all([
-      prisma.storeSettings.findUnique({ where: { id: "singleton" }, select: { storeName: true, description: true, email: true, whatsappNumber: true, address: true, isActive: true } }),
+      prisma.storeSettings.findUnique({ where: { id: "singleton" }, select: { storeName: true, description: true, email: true, whatsappNumber: true, instagramUrl: true, facebookUrl: true, address: true, isActive: true } }),
       prisma.storeSeoSettings.findUnique({ where: { locale: "AR" }, select: { description: true, defaultOgImageUrl: true } }),
     ]);
     const whatsappNumber = settings?.whatsappNumber?.trim() || null;
@@ -79,6 +94,8 @@ export const getPublicSiteData = cache(async (): Promise<PublicSiteData> => {
       email: settings?.email?.trim() || null,
       phone: whatsappNumber,
       whatsappNumber,
+      instagramUrl: publicSocialUrl(settings?.instagramUrl, "instagram.com"),
+      facebookUrl: publicSocialUrl(settings?.facebookUrl, "facebook.com"),
       address: addressText(settings?.address),
       currency: storeCurrency,
       storeActive: settings?.isActive ?? null,

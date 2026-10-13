@@ -61,10 +61,20 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function ToastMessage({ message, tone = "info", eventKey }: { message?: string | null; tone?: ToastTone; eventKey?: unknown }) {
+export function ToastMessage({ message, tone = "info", eventKey, cleanUrl = false }: { message?: string | null; tone?: ToastTone; eventKey?: unknown; cleanUrl?: boolean }) {
   const notify = useContext(ToastContext);
+  const lastFiredKey = useRef("");
   useEffect(() => {
-    if (message) notify(message, tone);
-  }, [eventKey, message, notify, tone]);
+    if (!message) return;
+    const key = `${message}::${String(eventKey ?? "")}`;
+    if (lastFiredKey.current === key) return;
+    lastFiredKey.current = key;
+    notify(message, tone);
+    if (cleanUrl && typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("notice");
+      window.history.replaceState(null, "", url.toString());
+    }
+  }, [eventKey, message, notify, tone, cleanUrl]);
   return null;
 }

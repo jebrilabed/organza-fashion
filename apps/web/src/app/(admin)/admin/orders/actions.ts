@@ -15,9 +15,29 @@ class OrderDeletionError extends Error {
   }
 }
 
+function safeOrdersListReturnPath(value: FormDataEntryValue | null) {
+  if (typeof value !== "string" || value.length > 2048) return null;
+  try {
+    const base = new URL("https://organza.invalid");
+    const url = new URL(value, base);
+    if (url.origin !== base.origin || url.pathname !== "/admin/orders" || url.hash) return null;
+    return `${url.pathname}${url.search}`;
+  } catch {
+    return null;
+  }
+}
+
+function orderStatusDestination(orderId: string, notice: string, returnTo: string | null) {
+  if (!returnTo) return `/admin/orders/${encodeURIComponent(orderId)}?notice=${notice}`;
+  const url = new URL(returnTo, "https://organza.invalid");
+  url.searchParams.set("notice", notice);
+  return `${url.pathname}${url.search}`;
+}
+
 export async function updateOrderStatusAction(formData: FormData) {
   const orderId = String(formData.get("orderId") ?? "").trim();
   const statusValue = String(formData.get("status") ?? "").trim();
+  const returnTo = safeOrdersListReturnPath(formData.get("returnTo"));
   if (!orderId || orderId.length > 64 || !Object.values(OrderStatus).includes(statusValue as OrderStatus)) {
     redirect("/admin/orders?notice=invalid");
   }
@@ -46,9 +66,10 @@ export async function updateOrderStatusAction(formData: FormData) {
   }
   revalidatePath("/admin");
   revalidatePath("/admin/orders");
+  revalidatePath(`/admin/orders/${encodeURIComponent(orderId)}`);
   revalidatePath("/admin/inventory");
   revalidatePath("/ar/orders");
-  redirect(`/admin/orders/${encodeURIComponent(orderId)}?notice=${notice}`);
+  redirect(orderStatusDestination(orderId, notice, returnTo));
 }
 
 export async function updatePaymentStatusAction(formData: FormData) {

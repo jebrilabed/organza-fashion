@@ -5,6 +5,115 @@ import { Input } from "@/components/ui";
 import { storefrontMessages as messages } from "@/lib/storefront/messages";
 import { StorefrontSubmitButton } from "./submit-button";
 
+// ─── Store Policies ────────────────────────────────────────────────────────
+
+type Policy = { key: string; label: string; points: string[] };
+
+const STORE_POLICIES: Policy[] = [
+  {
+    key: "delivery",
+    label: "سياسة التوصيل",
+    points: [
+      "يتم التوصيل عادة خلال يومين الى ثلاثة ايام عمل.",
+      "توصيل الطلبات يتم من خلال شركات توصيل مرخصة في البلاد.",
+      "يتم الإتصال بك من خلال مندوب التوصيل قبل أن يصل الى عنوانك.",
+      "يمنع قطعياً فتح الطرد قبل الإستلام، ليست من صلاحيات موظف التوصيل.",
+      "يتم دفع ثمن البضائع المطلوبة إلى موظف التوصيل في حال اخترت وسيلة الدفع عند الاستلام.",
+    ],
+  },
+  {
+    key: "exchange",
+    label: "سياسة التبديل",
+    points: [
+      "يرفع طلب تبديل المنتجات خلال مدة لا تزيد عن 12 ساعة من الاستلام حيث ان هذه المدة كافية للتأكد والتحقق من المنتجات التي تم استلامها من قبلك.",
+      "يجب عليك الاحتفاظ بفاتورة المنتجات التي ترغب بتبديلها، فلا يمكن تبديل أي طلب دون وجود الفاتورة.",
+      "يترتب عليك تكاليف خدمة التوصيل عند تبديل طلبك.",
+      "قطع العرض ليست ضمن السياسة ولا يتم تبديلها.",
+    ],
+  },
+  {
+    key: "cancel",
+    label: "سياسة الإلغاء",
+    points: [
+      "يمكنك إلغاء طلبك عن طريق التواصل معنا مباشرة من خلال قنوات الاتصال المتوفرة على المتجر.",
+      "يمكن إلغاء الطلب فقط في حالة عدم تجهيزه وإرساله مع شركة التوصيل.",
+      "لا يمكن إلغاء الطلب في حال تم ارساله اليك مع شركة التوصيل.",
+    ],
+  },
+  {
+    key: "return",
+    label: "سياسة الإرجاع",
+    points: [
+      "لا يوجد ترجيع قطعياً، يوجد فقط تبديل ضمن سياسة التبديل الموضّحة.",
+    ],
+  },
+];
+
+function StorePolicies() {
+  const [openPolicy, setOpenPolicy] = useState<string | null>(null);
+  const active = STORE_POLICIES.find((p) => p.key === openPolicy) ?? null;
+
+  return (
+    <>
+      {/* Policies trigger row */}
+      <div className="store-policies-section" dir="rtl">
+        <p className="store-policies-title">سياسة المتجر</p>
+        <div className="store-policies-grid">
+          {STORE_POLICIES.map((policy) => (
+            <button
+              key={policy.key}
+              type="button"
+              className="store-policy-badge"
+              onClick={() => setOpenPolicy(policy.key)}
+              aria-label={`عرض ${policy.label}`}
+            >
+              <svg className="store-policy-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 2L3 7v5c0 5.25 3.75 10.15 9 11.25C17.25 22.15 21 17.25 21 12V7L12 2z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" fill="none"/>
+                <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <span>{policy.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Modal */}
+      {active && (
+        <div
+          className="store-policy-modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label={active.label}
+          onClick={() => setOpenPolicy(null)}
+        >
+          <div
+            className="store-policy-modal"
+            onClick={(e) => e.stopPropagation()}
+            dir="rtl"
+          >
+            <div className="store-policy-modal__header">
+              <h2 className="store-policy-modal__title">{active.label}</h2>
+              <button
+                className="store-policy-modal__close"
+                type="button"
+                onClick={() => setOpenPolicy(null)}
+                aria-label="إغلاق"
+              >
+                ✕
+              </button>
+            </div>
+            <ul className="store-policy-modal__list">
+              {active.points.map((point, i) => (
+                <li key={i} className="store-policy-modal__item">{point}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 export type VariantSkuData = {
   id: string;
   price: string;
@@ -136,28 +245,34 @@ export function ProductVariantSelector({
   if (!hasColors && !hasSizes && skus.length === 1) {
     const simpleSku = skus[0];
     return (
-      <form action={addToCartAction} className="store-form space-y-4">
-        <input type="hidden" name="skuId" value={simpleSku.id} />
-        <Input
-          value={quantity}
-          onChange={(event) => setQuantity(event.target.value)}
-          label={messages.ar.quantity}
-          max={simpleSku.stockQuantity}
-          min={1}
-          name="quantity"
-          required
-          type="number"
-        />
-        <StorefrontSubmitButton pendingText={messages.ar.adding} disabled={simpleSku.stockQuantity <= 0}>
-          {messages.ar.addToCart}
-        </StorefrontSubmitButton>
-      </form>
+      <>
+        <form action={addToCartAction} className="store-form">
+          <input type="hidden" name="skuId" value={simpleSku.id} />
+          <div className="store-product-purchase-actions">
+            <Input
+              value={quantity}
+              onChange={(event) => setQuantity(event.target.value)}
+              label={messages.ar.quantity}
+              max={simpleSku.stockQuantity}
+              min={1}
+              name="quantity"
+              required
+              type="number"
+            />
+            <StorefrontSubmitButton pendingText={messages.ar.adding} disabled={simpleSku.stockQuantity <= 0}>
+              {messages.ar.addToCart}
+            </StorefrontSubmitButton>
+          </div>
+        </form>
+        <StorePolicies />
+      </>
     );
   }
 
   return (
-    <form action={addToCartAction} onSubmit={handleSubmit} className="store-form space-y-5 my-4">
-      <input type="hidden" name="skuId" value={matchedSku ? matchedSku.id : ""} />
+    <>
+      <form action={addToCartAction} onSubmit={handleSubmit} className="store-form space-y-5 my-4">
+        <input type="hidden" name="skuId" value={matchedSku ? matchedSku.id : ""} />
 
       {isSelectionComplete && matchedSku && (
         <p className="store-variant-price">
@@ -274,7 +389,7 @@ export function ProductVariantSelector({
       )}
 
       {/* Quantity & Add to Cart */}
-      <div className="space-y-3 pt-2">
+      <div className="store-product-purchase-actions pt-2">
         <Input
           value={quantity}
           onChange={(event) => setQuantity(event.target.value)}
@@ -291,5 +406,7 @@ export function ProductVariantSelector({
         </StorefrontSubmitButton>
       </div>
     </form>
+    <StorePolicies />
+  </>
   );
 }

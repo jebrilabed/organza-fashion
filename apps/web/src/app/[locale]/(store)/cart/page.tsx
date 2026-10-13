@@ -55,25 +55,30 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
                   <Card className="store-cart-item" key={item.id}>
                     <div className="store-cart-item__image">{colorImageUrl || image ? <SafeProductImage alt={image?.altText || translation?.name || messages.ar.product} sizes="96px" src={colorImageUrl ?? image!.url} /> : <span>{messages.ar.noImage}</span>}</div>
                     <div className="store-cart-item__content">
-                      <h2>{translation ? <Link href={`/ar/products/${encodeURIComponent(translation.slug)}`}>{translation.name}</Link> : messages.ar.unavailableItem}</h2>
-                      <p className="store-muted"><VariantOptionsDisplay options={item.sku.variantOptions} /></p>
-                      <p>{currency ? <>{messages.ar.price}: {formatMoney(item.sku.price, currency)} · {messages.ar.lineTotal}: <strong>{formatMoney(lineTotal, currency)}</strong></> : messages.ar.currencyUnavailable}</p>
-                      {!available && <Badge variant="error">{messages.ar.unavailableItem}</Badge>}
-                      <div className="store-cart-item__actions">
-                        {adjustable && (
-                          <form action={updateCartQuantityAction} className="store-form--inline">
-                            <input name="itemId" type="hidden" value={item.id} />
-                            <Input aria-label={messages.ar.quantity} defaultValue={item.quantity} label={messages.ar.quantity} max={item.sku.stockQuantity} min={1} name="quantity" required type="number" />
-                            <StorefrontSubmitButton pendingText={messages.ar.updating}>{messages.ar.updateQuantity}</StorefrontSubmitButton>
-                          </form>
-                        )}
-                        <form action={removeCartItemAction}><input name="itemId" type="hidden" value={item.id} /><StorefrontSubmitButton pendingText={messages.ar.removing}>{messages.ar.remove}</StorefrontSubmitButton></form>
+                      <div className="store-cart-item__product">
+                        <h2>{translation ? <Link href={`/ar/products/${encodeURIComponent(translation.slug)}`}>{translation.name}</Link> : messages.ar.unavailableItem}</h2>
+                        <p className="store-muted"><VariantOptionsDisplay options={item.sku.variantOptions} /></p>
+                        <p>{currency ? <>{messages.ar.price}: {formatMoney(item.sku.price, currency)}</> : messages.ar.currencyUnavailable}</p>
+                        {!available && <Badge variant="error">{messages.ar.unavailableItem}</Badge>}
+                      </div>
+                      <div className="store-cart-item__summary">
+                        {currency && <p className="store-cart-item__line-total"><span>{messages.ar.lineTotal}</span><strong>{formatMoney(lineTotal, currency)}</strong></p>}
+                        <div className="store-cart-item__actions">
+                          {adjustable && (
+                            <form action={updateCartQuantityAction} className="store-form--inline store-cart-item__quantity-form">
+                              <input name="itemId" type="hidden" value={item.id} />
+                              <Input aria-label={messages.ar.quantity} defaultValue={item.quantity} label={messages.ar.quantity} max={item.sku.stockQuantity} min={1} name="quantity" required type="number" />
+                              <StorefrontSubmitButton pendingText={messages.ar.updating}>{messages.ar.updateQuantity}</StorefrontSubmitButton>
+                            </form>
+                          )}
+                          <form action={removeCartItemAction} className="store-cart-item__remove-form"><input name="itemId" type="hidden" value={item.id} /><StorefrontSubmitButton pendingText={messages.ar.removing}>{messages.ar.remove}</StorefrontSubmitButton></form>
+                        </div>
                       </div>
                     </div>
                   </Card>
                 );
               })}
-              <form action={clearCartAction}><StorefrontSubmitButton pendingText={messages.ar.clearing}>{messages.ar.clearCart}</StorefrontSubmitButton></form>
+              <form action={clearCartAction} className="store-cart-list__clear-form"><StorefrontSubmitButton pendingText={messages.ar.clearing}>{messages.ar.clearCart}</StorefrontSubmitButton></form>
             </div>
             <Card className="store-summary">
               <h2>{messages.ar.subtotal}</h2>

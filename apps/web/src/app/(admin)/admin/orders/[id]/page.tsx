@@ -1,8 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { requireAdminPage } from "@/lib/auth/authorization";
-import { Badge, Card, Container, Select } from "@/components/ui";
-import { StorefrontSubmitButton } from "@/components/storefront/submit-button";
+import { Badge, Card, Container } from "@/components/ui";
 import { DeleteOrderForm } from "@/components/admin/delete-order-form";
 import { ToastMessage } from "@/components/ui/toast";
 import { SafeProductImage } from "@/components/storefront/safe-product-image";
@@ -14,6 +13,7 @@ import { availableAdminOrderStatuses } from "@/lib/storefront/order-workflow.mjs
 import { addressParts, formatMoney } from "@/lib/storefront/format";
 import { orderStatusLabel, paymentMethodLabel, paymentStatusLabel } from "@/lib/storefront/order-labels";
 import { storefrontMessages as messages } from "@/lib/storefront/messages";
+import { InlineStatusSelect } from "@/components/admin/order-status-select";
 import { updateOrderStatusAction, updatePaymentStatusAction } from "../actions";
 
 export default async function AdminOrderDetails({ params, searchParams }: {
@@ -65,18 +65,57 @@ export default async function AdminOrderDetails({ params, searchParams }: {
   });
   if (!order) notFound();
   const address = addressParts(order.shippingAddress);
-  const availableStatuses = availableAdminOrderStatuses(order.status);
+  const availableStatuses = availableAdminOrderStatuses(order.status) as OrderStatus[];
   const adminText = adminMessages.ar;
+
+  // Build options: always include current status + available transitions
+  const orderStatusOptions = [
+    { value: order.status, label: orderStatusLabel(order.status) },
+    ...availableStatuses
+      .filter((s) => s !== order.status)
+      .map((s) => ({ value: s, label: orderStatusLabel(s) })),
+  ];
+
+  const paymentStatusOptions = Object.values(PaymentStatus).map((s) => ({
+    value: s,
+    label: paymentStatusLabel(s),
+  }));
 
   return (
     <Container className="admin-content">
       <header className="admin-page-header"><div><p className="admin-eyebrow">{messages.ar.adminOrders}</p><h1 dir="ltr">{order.orderNumber}</h1><p><Badge>{orderStatusLabel(order.status)}</Badge></p></div><div className="admin-order-header-actions"><DeleteOrderForm orderId={order.id} label={adminText.deleteOrder} confirmMessage={adminText.deleteOrderConfirm} /><Link href="/admin/orders">{messages.ar.backToAdminOrders}</Link></div></header>
-      <ToastMessage message={notice === "updated" ? messages.ar.statusUpdated : notice === "paymentUpdated" ? messages.ar.paymentStatusUpdated : undefined} tone="success" />
-      <ToastMessage message={notice === "transition" ? messages.ar.invalidTransition : notice === "missingSku" ? messages.ar.missingSkuRestore : notice === "alreadyCancelled" ? messages.ar.alreadyCancelled : notice === "restockUnavailable" ? messages.ar.restockUnavailable : notice === "reserveUnavailable" ? messages.ar.reserveUnavailable : notice === "paymentInvalid" ? messages.ar.paymentStatusInvalid : notice === "paymentUpdateFailed" ? messages.ar.paymentStatusUpdateFailed : notice === "deleteMissingSku" ? adminText.orderDeleteMissingSku : notice === "deleteRestockUnavailable" ? adminText.orderDeleteRestockUnavailable : notice === "deleteNotificationProcessing" ? adminText.orderDeleteNotificationProcessing : notice === "deleteFailed" ? adminText.orderDeleteFailed : notice === "notFound" ? messages.ar.orderNotFound : notice && notice !== "updated" && notice !== "paymentUpdated" ? messages.ar.databaseUnavailable : undefined} tone="error" />
+      <ToastMessage cleanUrl message={notice === "updated" ? messages.ar.statusUpdated : notice === "paymentUpdated" ? messages.ar.paymentStatusUpdated : undefined} tone="success" />
+      <ToastMessage cleanUrl message={notice === "transition" ? messages.ar.invalidTransition : notice === "missingSku" ? messages.ar.missingSkuRestore : notice === "alreadyCancelled" ? messages.ar.alreadyCancelled : notice === "restockUnavailable" ? messages.ar.restockUnavailable : notice === "reserveUnavailable" ? messages.ar.reserveUnavailable : notice === "paymentInvalid" ? messages.ar.paymentStatusInvalid : notice === "paymentUpdateFailed" ? messages.ar.paymentStatusUpdateFailed : notice === "deleteMissingSku" ? adminText.orderDeleteMissingSku : notice === "deleteRestockUnavailable" ? adminText.orderDeleteRestockUnavailable : notice === "deleteNotificationProcessing" ? adminText.orderDeleteNotificationProcessing : notice === "deleteFailed" ? adminText.orderDeleteFailed : notice === "notFound" ? messages.ar.orderNotFound : notice && notice !== "updated" && notice !== "paymentUpdated" ? messages.ar.databaseUnavailable : undefined} tone="error" />
       <div className="store-admin-order-info">
         <Card><h2>{messages.ar.customer}</h2><p>{order.contactName}</p><p dir="ltr">{order.contactPhone}</p>{order.contactEmail && <p dir="ltr">{order.contactEmail}</p>}</Card>
         <Card><h2>{messages.ar.addressInfo}</h2><p>{address.deliveryZoneName && <>{messages.ar.deliveryZoneLabel}: {address.deliveryZoneName}<br /></>}</p><p>{address.address}</p><p>{address.city}</p></Card>
-        <Card><h2>{messages.ar.adminOrderDetails}</h2><p>{messages.ar.orderDate}: {new Intl.DateTimeFormat("ar-SA", { dateStyle: "medium", timeStyle: "short" }).format(order.createdAt)}</p><p>{messages.ar.orderDateUpdated}: {new Intl.DateTimeFormat("ar-SA", { dateStyle: "medium", timeStyle: "short" }).format(order.updatedAt)}</p><p>{messages.ar.orderStatus}: {orderStatusLabel(order.status)}</p><p>{messages.ar.paymentStatus}: {paymentStatusLabel(order.paymentStatus)}</p><p>{messages.ar.paymentMethodLabel}: {paymentMethodLabel(order.paymentMethod)}</p>{order.paymentReceipt && <Link href={`/api/orders/${encodeURIComponent(order.orderNumber)}/payment-receipt`} target="_blank">{messages.ar.paymentReceiptLink}</Link>}</Card>
+        <Card>
+          <h2>{messages.ar.adminOrderDetails}</h2>
+          <p>{messages.ar.orderDate}: {new Intl.DateTimeFormat("ar-SA", { dateStyle: "medium", timeStyle: "short" }).format(order.createdAt)}</p>
+          <p>{messages.ar.orderDateUpdated}: {new Intl.DateTimeFormat("ar-SA", { dateStyle: "medium", timeStyle: "short" }).format(order.updatedAt)}</p>
+          <div className="admin-order-detail-status-row">
+            <span className="admin-order-detail-status-label">{messages.ar.orderStatus}</span>
+            <InlineStatusSelect
+              action={updateOrderStatusAction}
+              defaultValue={order.status}
+              fieldName="status"
+              options={orderStatusOptions}
+              orderId={order.id}
+            />
+          </div>
+          <div className="admin-order-detail-status-row">
+            <span className="admin-order-detail-status-label">{messages.ar.paymentStatus}</span>
+            <InlineStatusSelect
+              action={updatePaymentStatusAction}
+              defaultValue={order.paymentStatus}
+              fieldName="paymentStatus"
+              options={paymentStatusOptions}
+              orderId={order.id}
+            />
+          </div>
+          <p>{messages.ar.paymentMethodLabel}: {paymentMethodLabel(order.paymentMethod)}</p>
+          {order.paymentReceipt && <Link href={`/api/orders/${encodeURIComponent(order.orderNumber)}/payment-receipt`} target="_blank">{messages.ar.paymentReceiptLink}</Link>}
+        </Card>
         <Card><h2>{messages.ar.customerNote}</h2><p>{order.customerNote || messages.ar.noNotes}</p></Card>
       </div>
       <Card className="admin-order-items-card">
@@ -105,26 +144,6 @@ export default async function AdminOrderDetails({ params, searchParams }: {
           <p className="admin-order-total admin-order-total--grand"><span>{messages.ar.total}</span><strong>{formatMoney(order.total, order.currency)}</strong></p>
         </div>
       </Card>
-      <Card>
-        <h2>{messages.ar.updatePaymentStatus}</h2>
-        <form action={updatePaymentStatusAction} className="admin-order-status-form">
-          <input name="orderId" type="hidden" value={order.id} />
-          <Select defaultValue={order.paymentStatus} label={messages.ar.paymentStatus} name="paymentStatus" required>
-            {Object.values(PaymentStatus).map((status) => <option key={status} value={status}>{paymentStatusLabel(status)}</option>)}
-          </Select>
-          <StorefrontSubmitButton pendingText={messages.ar.saving}>{messages.ar.updatePaymentStatus}</StorefrontSubmitButton>
-        </form>
-      </Card>
-      {availableStatuses.length > 0 ? (
-        <Card>
-          <h2>{messages.ar.updateStatus}</h2>
-          <form action={updateOrderStatusAction} className="admin-order-status-form">
-            <input name="orderId" type="hidden" value={order.id} />
-            <Select label={messages.ar.status} name="status" required><option disabled value="">{messages.ar.nextStatus}</option>{availableStatuses.map((status) => <option key={status} value={status}>{orderStatusLabel(status as OrderStatus)}</option>)}</Select>
-            <StorefrontSubmitButton pendingText={messages.ar.saving}>{messages.ar.updateStatus}</StorefrontSubmitButton>
-          </form>
-        </Card>
-      ) : <p className="store-muted">{messages.ar.noStatusChanges}</p>}
     </Container>
   );
 }

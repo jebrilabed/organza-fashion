@@ -1,16 +1,24 @@
 import Link from "next/link";
 import { requireAdminPage } from "@/lib/auth/authorization";
-import { Badge, Button, Container, Input, Select } from "@/components/ui";
+import { Button, Container, Input, Select } from "@/components/ui";
 import { OrderStatus, PaymentStatus } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db/prisma";
 import { ADMIN_PAGE_SIZE } from "@/lib/admin/config";
 import { buildAdminOrderWhere, parseAdminOrderFilters } from "@/lib/admin/order-filters.mjs";
 import { orderStatusLabel, paymentStatusLabel } from "@/lib/storefront/order-labels";
 import { storefrontMessages as messages } from "@/lib/storefront/messages";
+import { availableAdminOrderStatuses } from "@/lib/storefront/order-workflow.mjs";
 import { formatMoney } from "@/lib/storefront/format";
 import { adminMessages } from "@/lib/admin/messages";
 import { DeleteOrderForm } from "@/components/admin/delete-order-form";
+import { InlineStatusSelect } from "@/components/admin/order-status-select";
 import { ToastMessage } from "@/components/ui/toast";
+import { updateOrderStatusAction, updatePaymentStatusAction } from "./actions";
+
+const allPaymentStatusOptions = Object.values(PaymentStatus).map((s) => ({
+  value: s,
+  label: paymentStatusLabel(s),
+}));
 
 const statusOptions = Object.values(OrderStatus);
 const notices: Record<string, string> = {
@@ -23,6 +31,7 @@ const notices: Record<string, string> = {
   invalid: messages.ar.genericError,
   alreadyCancelled: messages.ar.alreadyCancelled,
   restockUnavailable: messages.ar.restockUnavailable,
+  reserveUnavailable: messages.ar.reserveUnavailable,
   deleted: adminMessages.ar.orderDeleted,
 };
 
@@ -65,7 +74,7 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
           <p className="admin-orders-header__count"><strong>{total}</strong> {messages.ar.orderCount}</p>
         </div>
       </header>
-      <ToastMessage message={notice ? notices[notice] : undefined} tone={notice === "updated" || notice === "deleted" ? "success" : "error"} />
+      <ToastMessage cleanUrl message={notice ? notices[notice] : undefined} tone={notice === "updated" || notice === "deleted" ? "success" : "error"} />
       <form aria-label={messages.ar.adminOrders} className="admin-orders-filters" method="get">
         <div className="admin-orders-filters__fields">
           <Input className="admin-orders-filters__search" defaultValue={query} label={messages.ar.searchOrders} maxLength={120} name="q" type="search" />
@@ -92,15 +101,22 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
         <div aria-label={messages.ar.adminOrders} className="ui-table-wrap admin-orders-table-wrap" role="region" tabIndex={0}>
           <table className="ui-table admin-orders-table">
             <thead><tr><th>{messages.ar.orderNumber}</th><th>{messages.ar.customer}</th><th>{adminMessages.ar.phoneNumber}</th><th>{messages.ar.total}</th><th>{messages.ar.status} / {messages.ar.paymentStatus}</th><th>{messages.ar.orderDate}</th><th>{messages.ar.actions}</th></tr></thead>
-            <tbody>{orders.map((order) => <tr key={order.id}>
-              <td data-label={messages.ar.orderNumber}><span className="admin-orders-table__order"><Link className="admin-orders-table__number" dir="ltr" href={`/admin/orders/${encodeURIComponent(order.id)}`}>{order.orderNumber}</Link><small>{messages.ar.details}</small></span></td>
+            <tbody>{orders.map((order) => {
+              const nextStatuses = availableAdminOrderStatuses(order.status) as OrderStatus[];
+              const orderStatusOptions = [
+                { value: order.status, label: orderStatusLabel(order.status) },
+                ...nextStatuses.filter((s) => s !== order.status).map((s) => ({ value: s, label: orderStatusLabel(s) })),
+              ];
+              return <tr key={order.id}>
+              <td data-label={messages.ar.orderNumber}><span className="admin-orders-table__order"><Link className="admin-orders-table__number" dir="ltr" href={`/admin/orders/${encodeURIComponent(order.id)}`}>{order.orderNumber}</Link></span></td>
               <td data-label={messages.ar.customer}><span className="admin-orders-table__customer"><strong>{order.contactName}</strong></span></td>
               <td data-label={adminMessages.ar.phoneNumber}><span className="admin-orders-table__phone" dir="ltr">{order.contactPhone}</span></td>
               <td data-label={messages.ar.total}><strong className="admin-orders-table__total">{formatMoney(order.total, order.currency)}</strong></td>
-              <td data-label={`${messages.ar.status} / ${messages.ar.paymentStatus}`}><span className="admin-orders-table__statuses"><span><small>{messages.ar.status}</small><Badge>{orderStatusLabel(order.status)}</Badge></span><span><small>{messages.ar.paymentStatus}</small><Badge>{paymentStatusLabel(order.paymentStatus)}</Badge></span></span></td>
+              <td data-label={`${messages.ar.status} / ${messages.ar.paymentStatus}`}><span className="admin-orders-table__statuses"><span><small>{messages.ar.status}</small><InlineStatusSelect action={updateOrderStatusAction} defaultValue={order.status} fieldName="status" options={orderStatusOptions} orderId={order.id} returnTo={urlFor(page)} /></span><span><small>{messages.ar.paymentStatus}</small><InlineStatusSelect action={updatePaymentStatusAction} defaultValue={order.paymentStatus} fieldName="paymentStatus" options={allPaymentStatusOptions} orderId={order.id} returnTo={urlFor(page)} /></span></span></td>
               <td data-label={messages.ar.orderDate}><span className="admin-orders-table__dates"><time dateTime={order.createdAt.toISOString()}>{new Intl.DateTimeFormat("ar-SA", { dateStyle: "medium", timeStyle: "short" }).format(order.createdAt)}</time><small>{messages.ar.orderDateUpdated}: {new Intl.DateTimeFormat("ar-SA", { dateStyle: "medium", timeStyle: "short" }).format(order.updatedAt)}</small></span></td>
               <td data-label={messages.ar.actions}><DeleteOrderForm orderId={order.id} label={adminMessages.ar.deleteOrder} confirmMessage={adminMessages.ar.deleteOrderConfirm} /></td>
-            </tr>)}</tbody>
+              </tr>;
+            })}</tbody>
           </table>
         </div>
       )}

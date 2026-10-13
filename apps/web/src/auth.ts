@@ -4,6 +4,7 @@ import NextAuth, { AuthError } from "next-auth";
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/db/prisma";
 import { hashPassword, verifyPassword } from "@/lib/auth/password-hash.mjs";
+import { normalizeAccountPhone } from "@/lib/auth/phone.mjs";
 
 let dummyPasswordHash: Promise<string> | undefined;
 
@@ -27,26 +28,26 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Credentials({
       credentials: {
-        email: { label: "Email", type: "email" },
+        phone: { label: "Phone number", type: "tel" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        const email = typeof credentials.email === "string" ? credentials.email.trim().toLowerCase() : "";
+        const phone = normalizeAccountPhone(credentials.phone);
         const password = typeof credentials.password === "string" ? credentials.password : "";
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) return null;
+        if (!phone) return null;
         if (password.length < 8 || password.length > 128) return null;
 
         const user = await prisma.user.findUnique({
-          where: { email },
-          select: { id: true, email: true, name: true, role: true, passwordHash: true },
+          where: { phone },
+          select: { id: true, phone: true, name: true, role: true, passwordHash: true },
         });
         const passwordHash = user?.passwordHash ?? await getDummyPasswordHash();
         const validPassword = await verifyPassword(password, passwordHash);
 
-        if (!user || !user.passwordHash || !validPassword || !user.email) return null;
+        if (!user || !user.passwordHash || !validPassword || !user.phone) return null;
         return {
           id: user.id,
-          email: user.email,
+          phone: user.phone,
           name: user.name,
           role: user.role,
         };

@@ -49,7 +49,7 @@ export const storefrontMessages = {
     updateQuantity: "تحديث الكمية",
     clearCart: "إفراغ السلة",
     subtotal: "المجموع الفرعي",
-    fifthOrderDiscount: "خصم الطلب الخامس (30%)",
+    fifthOrderDiscount: "خصم الطلب الخامس (15%)",
     cartItemsCount: "عدد القطع",
     cartLinesCount: "عدد المنتجات",
     checkoutTitle: "بيانات الطلب",

@@ -5,7 +5,7 @@ import { adminMessages as messages } from "@/lib/admin/messages";
 import { Button } from "@/components/ui";
 import { AdminMobileMenu, AdminNavigation } from "./admin-navigation";
 
-export function AdminShell({ children, email }: { children: React.ReactNode; email: string | null }) {
+export function AdminShell({ children, phone }: { children: React.ReactNode; phone: string | null }) {
   return (
     <div className="admin-shell" dir="rtl">
       <aside className="admin-sidebar" aria-label={messages.ar.admin}>
@@ -20,8 +20,8 @@ export function AdminShell({ children, email }: { children: React.ReactNode; ema
           <StoreIcon /><span>{messages.ar.openStore}</span>
         </Link>
         <div className="admin-sidebar__footer">
-          <span className="admin-identity__avatar" aria-hidden="true">{email?.slice(0, 1).toLocaleUpperCase("ar") ?? "م"}</span>
-          <span className="admin-identity__text"><strong>{messages.ar.admin}</strong><small dir="ltr">{email ?? ""}</small></span>
+          <span className="admin-identity__avatar" aria-hidden="true">{phone?.slice(0, 1) ?? "م"}</span>
+          <span className="admin-identity__text"><strong>{messages.ar.admin}</strong><small dir="ltr">{phone ?? ""}</small></span>
           <form action={async () => { "use server"; await signOut({ redirectTo: "/ar/login" }); }}>
             <Button type="submit" variant="ghost" size="small" aria-label={messages.ar.signOut}>↪</Button>
           </form>
@@ -35,7 +35,7 @@ export function AdminShell({ children, email }: { children: React.ReactNode; ema
             </span>
           </Link>
           <div className="admin-mobile-header__tools">
-            <span className="admin-mobile-identity" dir="ltr">{email ?? ""}</span>
+            <span className="admin-mobile-identity" dir="ltr">{phone ?? ""}</span>
             <Link aria-label={messages.ar.openStore} className="ui-button ui-button--outline admin-store-link admin-store-link--mobile" href="/ar" title={messages.ar.openStore}>
               <StoreIcon /><span>{messages.ar.openStore}</span>
             </Link>

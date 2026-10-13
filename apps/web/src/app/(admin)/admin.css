@@ -256,22 +256,22 @@
 .admin-orders-table tbody tr { transition: background-color var(--motion-fast) var(--ease-standard); }
 .admin-orders-table tbody tr:hover { background: color-mix(in srgb, var(--brand-secondary) 26%, white); }
 .admin-orders-table th:first-child,
-.admin-orders-table td:first-child { inline-size: 14%; }
+.admin-orders-table td:first-child { inline-size: 13%; }
 .admin-orders-table th:nth-child(2),
-.admin-orders-table td:nth-child(2) { inline-size: 16%; }
+.admin-orders-table td:nth-child(2) { inline-size: 14%; }
 .admin-orders-table th:nth-child(3),
-.admin-orders-table td:nth-child(3) { inline-size: 15%; }
+.admin-orders-table td:nth-child(3) { inline-size: 13%; }
 .admin-orders-table th:nth-child(4),
-.admin-orders-table td:nth-child(4) { inline-size: 12%; }
+.admin-orders-table td:nth-child(4) { inline-size: 10%; }
 .admin-orders-table th:nth-child(5),
-.admin-orders-table td:nth-child(5) { inline-size: 18%; }
+.admin-orders-table td:nth-child(5) { inline-size: 28%; }
 .admin-orders-table th:nth-child(6),
-.admin-orders-table td:nth-child(6) { inline-size: 15%; }
+.admin-orders-table td:nth-child(6) { inline-size: 12%; }
 .admin-orders-table th:last-child,
 .admin-orders-table td:last-child { inline-size: 10%; }
 .admin-orders-table__order,
 .admin-orders-table__customer,
-.admin-orders-table__dates { display: grid; gap: .25rem; min-inline-size: 0; text-align: start; }
+.admin-orders-table__dates { display: grid; gap: .25rem; min-inline-size: 0; text-align: center; justify-items: center; }
 .admin-orders-table__number { color: var(--brand-primary); font-weight: 800; text-decoration: none; }
 .admin-orders-table__number:hover { text-decoration: underline; text-underline-offset: .2em; }
 .admin-orders-table__order small,
@@ -280,9 +280,69 @@
 .admin-orders-table__phone { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .admin-orders-table__total { color: var(--brand-primary-hover); white-space: nowrap; }
 .admin-orders-table__dates time { font-size: .84rem; }
-.admin-orders-table__statuses { display: grid; justify-items: start; gap: .35rem; }
-.admin-orders-table__statuses > span { display: flex; min-inline-size: 0; flex-direction: column; align-items: start; gap: .2rem; }
-.admin-orders-table__statuses small { color: var(--text-muted); font-size: .72rem; }
+.admin-orders-table__statuses { display: grid; justify-items: center; gap: .35rem; }
+.admin-orders-table__statuses > span { display: flex; min-inline-size: 0; flex-direction: column; align-items: center; gap: .2rem; }
+.admin-orders-table__statuses small { color: var(--text-muted); font-size: .72rem; text-align: center; }
+.admin-orders-table__status-form { display: grid; inline-size: 100%; min-inline-size: 0; gap: .4rem; margin-block-start: .2rem; }
+.admin-orders-table__status-form .ui-field { min-inline-size: 0; gap: .2rem; }
+.admin-orders-table__status-form .ui-field__label { font-size: .7rem; }
+.admin-orders-table__status-form .ui-field__control { min-block-size: 2.35rem; padding-inline: .55rem; font-size: .78rem; }
+.admin-orders-table__status-submit { min-block-size: 2.25rem; padding-inline: .6rem; font-size: .78rem; }
+
+/* ── Inline status selector (detail card + table) ──────────────────────── */
+.order-inline-status-form { display: contents; }
+.order-inline-status-select {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 2rem;
+  border: 1.5px solid color-mix(in srgb, var(--brand-primary) 28%, var(--border-subtle));
+  border-radius: .6rem;
+  padding-block: .2rem;
+  padding-inline: .55rem .3rem;
+  color: var(--brand-primary-hover);
+  background: color-mix(in srgb, var(--brand-secondary) 22%, white);
+  font-size: .82rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color var(--motion-fast) var(--ease-standard), background var(--motion-fast) var(--ease-standard), box-shadow var(--motion-fast) var(--ease-standard);
+  appearance: auto;
+  max-inline-size: 100%;
+}
+.order-inline-status-select:hover:not(:disabled) {
+  border-color: var(--brand-primary);
+  background: color-mix(in srgb, var(--brand-secondary) 40%, white);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--brand-primary) 12%, transparent);
+}
+.order-inline-status-select:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+.order-inline-status-select--pending {
+  opacity: .6;
+  cursor: wait;
+}
+
+/* Detail page: status rows inside the order info card */
+.admin-order-detail-status-row {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  flex-wrap: wrap;
+  margin-block: .2rem;
+}
+.admin-order-detail-status-label {
+  color: var(--text-muted);
+  font-size: .88rem;
+  white-space: nowrap;
+}
+
+/* Table: inline select inside status cell */
+.admin-orders-table__status-form { display: grid; inline-size: 100%; min-inline-size: 0; gap: .4rem; margin-block-start: .2rem; }
+.admin-orders-table__status-form .ui-field { min-inline-size: 0; gap: .2rem; }
+.admin-orders-table__status-form .ui-field__label { font-size: .7rem; }
+.admin-orders-table__status-form .ui-field__control { min-block-size: 2.35rem; padding-inline: .55rem; font-size: .78rem; }
+.admin-orders-table__statuses .order-inline-status-select { font-size: .78rem; min-block-size: 1.9rem; margin-block-start: .15rem; }
 .admin-feedback { margin: 0; border-radius: 0.75rem; padding: 0.7rem 0.9rem; }
 .admin-feedback--success { color: var(--status-success); background: color-mix(in srgb, var(--status-success) 9%, var(--surface-raised)); }
 .admin-feedback--error { color: var(--status-error); background: color-mix(in srgb, var(--status-error) 9%, var(--surface-raised)); }
@@ -783,4 +843,6 @@
   .admin-orders-table__dates { justify-items: center; text-align: center; }
   .admin-orders-table__statuses { justify-items: center; }
   .admin-orders-table__statuses > span { align-items: center; }
+  .admin-orders-table__statuses small { text-align: center; }
+  .admin-orders-table__statuses .order-inline-status-select { text-align: center; }
 }

@@ -90,10 +90,15 @@ store configuration through the admin workflow after the admin account is establ
 ## Admin account
 
 The existing one-time bootstrap command is `npm run auth:bootstrap-admin`. It requires
-`DATABASE_URL`, `ADMIN_BOOTSTRAP_EMAIL`, and `ADMIN_BOOTSTRAP_PASSWORD` in the process
+`DATABASE_URL`, `ADMIN_BOOTSTRAP_PHONE`, and `ADMIN_BOOTSTRAP_PASSWORD` in the process
 environment. Set those only for the one-time command in a trusted terminal or secret
 manager, then remove them from that process. No admin credentials are included here.
 Do not create a fabricated customer or catalog seed.
+
+For an existing administrator, use `npm run auth:update-admin-phone` from `apps/web`
+with a one-time `ADMIN_ACCOUNT_PHONE`; provide `ADMIN_ACCOUNT_EMAIL` if multiple admin
+accounts exist. This preserves the current password and records the phone change in
+the audit log. Do not store these temporary values in project environment files.
 
 ## Health and SEO behavior
 

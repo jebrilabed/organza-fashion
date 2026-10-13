@@ -26,5 +26,5 @@ export function calculateFifthOrderDiscount(subtotal, previousOrderCount) {
   if (!moneyPattern.test(subtotal) || !Number.isSafeInteger(previousOrderCount) || previousOrderCount < 0 || (previousOrderCount + 1) % 5 !== 0) {
     return "0.00";
   }
-  return new Decimal(subtotal).mul("0.30").toDecimalPlaces(2).toFixed(2);
+  return new Decimal(subtotal).mul("0.15").toDecimalPlaces(2).toFixed(2);
 }

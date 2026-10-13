@@ -52,10 +52,10 @@ test("checkout accepts required contact details without an email address", () =>
   assert.equal(parsed.value.contactEmail, "");
 });
 
-test("fifth and every fifth order receive 30 percent off the product subtotal", () => {
+test("fifth and every fifth order receive 15 percent off the product subtotal", () => {
   assert.equal(calculateFifthOrderDiscount("100.00", 3), "0.00");
-  assert.equal(calculateFifthOrderDiscount("100.00", 4), "30.00");
-  assert.equal(calculateFifthOrderDiscount("100.00", 9), "30.00");
+  assert.equal(calculateFifthOrderDiscount("100.00", 4), "15.00");
+  assert.equal(calculateFifthOrderDiscount("100.00", 9), "15.00");
 });
 
 test("checkout requires a delivery zone", () => {

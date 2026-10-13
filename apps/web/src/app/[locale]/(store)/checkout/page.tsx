@@ -4,10 +4,11 @@ import { notFound } from "next/navigation";
 import { Card, Container } from "@/components/ui";
 import { CheckoutForm } from "@/components/storefront/checkout-form";
 import { CheckoutRecovery } from "@/components/storefront/checkout-recovery";
+import { SafeProductImage } from "@/components/storefront/safe-product-image";
 import { isLocale } from "@/lib/i18n/config";
 import { OrderStatus } from "@/generated/prisma/enums";
 import { Prisma } from "@/generated/prisma/client";
-import { formatMoney } from "@/lib/storefront/format";
+import { addressParts, formatMoney } from "@/lib/storefront/format";
 import { VariantOptionsDisplay } from "@/components/storefront/variant-options-display";
 import { getCartSnapshot, isCartLineAvailable, readCartTokenHash } from "@/lib/storefront/cart";
 import { getCurrentUser } from "@/lib/auth/authorization";
@@ -31,10 +32,16 @@ export default async function CheckoutPage({ params }: { params: Promise<{ local
     prisma.storeSettings.findUnique({ where: { id: "singleton" }, select: { isActive: true, configuration: true, shippingSettings: true } }),
   ]);
   const userId = user?.id ?? null;
-  const [defaultAddress, customer, previousOrderCount] = await Promise.all([
+  const [defaultAddress, customer, previousOrderCount, lastOrder] = await Promise.all([
     userId ? prisma.customerAddress.findFirst({ where: { userId, isDefault: true } }) : Promise.resolve(null),
-    userId ? prisma.customer.findUnique({ where: { userId }, select: { phone: true } }) : Promise.resolve(null),
-    user?.role === "CUSTOMER" ? prisma.order.count({ where: { userId: user.id, status: { not: OrderStatus.CANCELLED } } }) : Promise.resolve(0),
+    userId ? prisma.customer.findUnique({ where: { userId }, select: { phone: true, name: true } }) : Promise.resolve(null),
+    userId ? prisma.order.count({ where: { userId, status: { not: OrderStatus.CANCELLED } } }) : Promise.resolve(0),
+    // Fetch the most recent order to reuse shipping info when no default address is saved
+    userId ? prisma.order.findFirst({
+      where: { userId, status: { not: OrderStatus.CANCELLED } },
+      orderBy: { createdAt: "desc" },
+      select: { contactName: true, contactPhone: true, shippingAddress: true },
+    }) : Promise.resolve(null),
   ]);
   const guestTokenHash = userId ? null : await readCartTokenHash();
   const items = cart?.items ?? [];
@@ -67,6 +74,23 @@ export default async function CheckoutPage({ params }: { params: Promise<{ local
   const canSubmit = available && checkoutAttempt !== null && deliveryZones.length > 0;
   const bankTransfer = getBankTransferDetails(settings?.configuration);
 
+  // ── Auto-fill priority: defaultAddress → lastOrder → user/customer profile ──
+  const lastOrderAddress = lastOrder ? addressParts(lastOrder.shippingAddress) : null;
+  const prefillName = userId
+    ? (defaultAddress?.fullName || lastOrder?.contactName || customer?.name || user?.name || "")
+    : "";
+  const prefillPhone = defaultAddress?.phone
+    || lastOrder?.contactPhone
+    || customer?.phone
+    || user?.phone
+    || "";
+  const prefillAddress = defaultAddress?.addressLine
+    || lastOrderAddress?.address
+    || "";
+  const prefillCity = defaultAddress?.city
+    || lastOrderAddress?.city
+    || "";
+
   return (
     <main className="store-main">
       <Container>
@@ -83,24 +107,40 @@ export default async function CheckoutPage({ params }: { params: Promise<{ local
             <Card>
               <h2>{messages.ar.orderedItems}</h2>
               <ul className="store-checkout-list">
-                {items.map((item) => <li key={item.id}>
-                  <span>{item.sku.product.translations[0]?.name} × {item.quantity}
-                    <small className="block mt-1"><VariantOptionsDisplay options={item.sku.variantOptions} /></small>
-                  </span>
-                  <strong>{formatMoney(item.sku.price.mul(item.quantity), currency)}</strong>
-                </li>)}
+                {items.map((item) => {
+                  const variantOptions = item.sku.variantOptions;
+                  const colorImageUrl = variantOptions && typeof variantOptions === "object" && !Array.isArray(variantOptions) &&
+                    typeof variantOptions.ColorImageUrl === "string" ? variantOptions.ColorImageUrl : null;
+                  const image = item.sku.product.images[0];
+                  const productName = item.sku.product.translations[0]?.name ?? messages.ar.product;
+                  return (
+                    <li className="store-checkout-list__item" key={item.id}>
+                      <div className="store-checkout-item">
+                        <div className="store-checkout-item__image">
+                          {colorImageUrl || image ? <SafeProductImage alt={image?.altText || productName} sizes="64px" src={colorImageUrl ?? image!.url} /> : <span>{messages.ar.noImage}</span>}
+                        </div>
+                        <div className="store-checkout-item__details">
+                          <span>{productName} × {item.quantity}</span>
+                          <small><VariantOptionsDisplay options={item.sku.variantOptions} /></small>
+                        </div>
+                      </div>
+                      <strong>{formatMoney(item.sku.price.mul(item.quantity), currency)}</strong>
+                    </li>
+                  );
+                })}
               </ul>
               <p className="store-summary__row"><span>{messages.ar.subtotal}</span><strong>{formatMoney(subtotal, currency)}</strong></p>
             </Card>
             <Card>
+              {!userId && <p className="store-muted">خصم الطلب الخامس متاح للعملاء المسجلين، وتُحتسب الطلبات المرتبطة بالحساب فقط. <Link href="/ar/login">سجّل الدخول</Link>.</p>}
               <CheckoutForm
                 checkoutToken={checkoutAttempt.token}
                 quoteFingerprint={checkoutAttempt.fingerprint}
                 checkoutExpiresAt={checkoutAttempt.expiresAt}
-                contactName={userId ? defaultAddress?.fullName ?? user?.name ?? "" : ""}
-                contactPhone={defaultAddress?.phone ?? customer?.phone ?? ""}
-                address={defaultAddress?.addressLine ?? ""}
-                city={defaultAddress?.city ?? ""}
+                contactName={prefillName}
+                contactPhone={prefillPhone}
+                address={prefillAddress}
+                city={prefillCity}
                 bankTransfer={bankTransfer}
                 deliveryZones={deliveryZones}
               />

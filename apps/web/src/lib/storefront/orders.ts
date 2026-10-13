@@ -1,7 +1,7 @@
 import "server-only";
 
 import { randomBytes } from "node:crypto";
-import { CartStatus, Locale, OrderStatus, PaymentMethod, PaymentStatus, ProductStatus, UserRole } from "@/generated/prisma/enums";
+import { CartStatus, Locale, OrderStatus, PaymentMethod, PaymentStatus, ProductStatus } from "@/generated/prisma/enums";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { storeCurrency } from "@/lib/phase7/validation.mjs";
@@ -256,8 +256,7 @@ export async function createOrderFromCart({
     }
     const shippingAddress = { address, city, deliveryZoneName: deliveryZone.name };
     const customer = userId ? await tx.customer.findUnique({ where: { userId }, select: { id: true } }) : null;
-    const account = userId ? await tx.user.findUnique({ where: { id: userId }, select: { role: true } }) : null;
-    const previousOrderCount = account?.role === UserRole.CUSTOMER
+    const previousOrderCount = userId
       ? await tx.order.count({ where: { userId, status: { not: OrderStatus.CANCELLED } } })
       : 0;
     const discountTotal = new Prisma.Decimal(calculateFifthOrderDiscount(subtotal.toFixed(2), previousOrderCount));

@@ -14,8 +14,8 @@ export async function registerCustomer(_previous: RegistrationState, formData: F
     const passwordHash = await hashPassword(parsed.value.password);
     await prisma.user.create({
       data: {
-        name: parsed.value.name, email: parsed.value.email, passwordHash, role: "CUSTOMER",
-        customer: { create: { name: parsed.value.name, email: parsed.value.email, phone: parsed.value.phone } },
+        name: parsed.value.name, phone: parsed.value.phone, passwordHash, role: "CUSTOMER",
+        customer: { create: { name: parsed.value.name, phone: parsed.value.phone } },
         addresses: { create: { fullName: parsed.value.name, phone: parsed.value.phone, addressLine: parsed.value.addressLine, city: parsed.value.city, isDefault: true } },
       },
       select: { id: true },
@@ -25,7 +25,7 @@ export async function registerCustomer(_previous: RegistrationState, formData: F
       ? "code" in error ? String(error.code) : "errorCode" in error ? String(error.errorCode) : "unknown"
       : "unknown";
     console.error("Customer registration failed.", { code });
-    if (code === "P2002") return { fieldErrors: { email: "emailAlreadyRegistered" } };
+    if (code === "P2002") return { fieldErrors: { phone: "phoneAlreadyRegistered" } };
     if (["P1000", "P1001", "P1002", "P1017", "P2024", "P2028"].includes(code)) {
       return { error: messages.ar.registrationUnavailable };
     }

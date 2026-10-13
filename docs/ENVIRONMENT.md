@@ -63,7 +63,7 @@ and contains digits only; without it, recipients must be entered in internationa
 `+` or `00` format. Set `CRON_SECRET` to a random value of at least 32 characters.
 All WhatsApp values in `.env.example` are empty.
 
-The admin bootstrap command also reads `ADMIN_BOOTSTRAP_EMAIL` and
+The admin bootstrap command also reads `ADMIN_BOOTSTRAP_PHONE` and
 `ADMIN_BOOTSTRAP_PASSWORD` only from its one-time process environment; do not add them
 to an environment file or example.
 

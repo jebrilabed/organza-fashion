@@ -23,6 +23,7 @@
     "test:phase16": "node --test tests/phase16-security.test.mjs",
     "test:deployment": "node --test tests/deployment-config.test.mjs",
     "auth:bootstrap-admin": "tsx scripts/bootstrap-admin.ts",
+    "auth:update-admin-phone": "tsx scripts/update-admin-phone.ts",
     "db:generate": "prisma generate --config ../../prisma.config.ts",
     "db:validate": "prisma validate --config ../../prisma.config.ts",
     "db:format": "prisma format --config ../../prisma.config.ts",

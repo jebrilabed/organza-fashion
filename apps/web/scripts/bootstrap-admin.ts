@@ -2,17 +2,18 @@ import { config as loadEnv } from "dotenv";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { hashPassword } from "../src/lib/auth/password-hash.mjs";
+import { normalizeAccountPhone } from "../src/lib/auth/phone.mjs";
 
 loadEnv({ path: ".env.local" });
 
 async function main() {
-  const email = process.env.ADMIN_BOOTSTRAP_EMAIL?.trim().toLowerCase() ?? "";
+  const phone = normalizeAccountPhone(process.env.ADMIN_BOOTSTRAP_PHONE);
   const password = process.env.ADMIN_BOOTSTRAP_PASSWORD ?? "";
-  delete process.env.ADMIN_BOOTSTRAP_EMAIL;
+  delete process.env.ADMIN_BOOTSTRAP_PHONE;
   delete process.env.ADMIN_BOOTSTRAP_PASSWORD;
 
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254 || password.length < 8 || password.length > 128) {
-    console.error("Admin bootstrap requires a valid ADMIN_BOOTSTRAP_EMAIL and a 8–128 character ADMIN_BOOTSTRAP_PASSWORD.");
+  if (!phone || password.length < 8 || password.length > 128) {
+    console.error("Admin bootstrap requires a valid ADMIN_BOOTSTRAP_PHONE and an 8–128 character ADMIN_BOOTSTRAP_PASSWORD.");
     process.exitCode = 1;
     return;
   }
@@ -28,16 +29,16 @@ async function main() {
   let stage = "database lookup";
 
   try {
-    const existingUser = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+    const existingUser = await prisma.user.findUnique({ where: { phone }, select: { id: true } });
     if (existingUser) {
-      console.error("Admin bootstrap refused: that email already belongs to a user; no account was changed.");
+      console.error("Admin bootstrap refused: that phone number already belongs to a user; no account was changed.");
       process.exitCode = 1;
     } else {
       stage = "password hashing";
       const passwordHash = await hashPassword(password);
       stage = "admin account creation";
       await prisma.user.create({
-        data: { email, passwordHash, role: "ADMIN" },
+        data: { phone, passwordHash, role: "ADMIN" },
         select: { id: true },
       });
       console.log("Administrator account created.");

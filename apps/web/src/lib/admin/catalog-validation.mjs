@@ -3,9 +3,16 @@ const skuPattern = /^[A-Za-z0-9][A-Za-z0-9._/-]{0,63}$/;
 const maxMoney = 9999999999.99;
 
 const text = (value) => (typeof value === "string" ? value.trim() : "");
+const normalizeLocalizedNumber = (value) => value
+  .replace(/[٠-٩۰-۹]/g, (digit) => {
+    const codePoint = digit.charCodeAt(0);
+    return String(codePoint >= 0x06f0 ? codePoint - 0x06f0 : codePoint - 0x0660);
+  })
+  .replace(/٫/g, ".")
+  .replace(/٬/g, "");
 
 function money(value, required, errors, key) {
-  const raw = text(value);
+  const raw = normalizeLocalizedNumber(text(value));
   if (!raw && !required) return null;
   if (!/^(?:\d{1,10})(?:\.\d{1,2})?$/.test(raw)) {
     errors[key] = "invalidMoney";

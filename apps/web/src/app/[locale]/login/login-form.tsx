@@ -12,13 +12,14 @@ export function LoginForm({ nextPath = "" }: { nextPath?: string }) {
     <form action={action} className="flex flex-col gap-5">
       {nextPath && <input name="next" type="hidden" value={nextPath} />}
       <Input
-        autoComplete="username"
+        autoComplete="tel"
         dir="ltr"
-        label="البريد الإلكتروني"
-        maxLength={254}
-        name="email"
+        label="رقم الجوال"
+        maxLength={20}
+        name="phone"
         required
-        type="email"
+        inputMode="tel"
+        type="tel"
       />
       <Input
         autoComplete="current-password"

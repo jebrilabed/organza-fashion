@@ -4,7 +4,7 @@ Phase 7 adds configurable store information, customer registration and profile m
 
 ## Store settings and currency
 
-Administrators manage the singleton store record at `/admin/settings`. The page accepts the store name and description, contact phone and email, address, active state, Arabic default locale, and a controlled currency code (`SAR`, `USD`, `EUR`, `ILS`, or `JOD`). Updates require the server-side ADMIN authorization helper and are recorded in the existing audit log without putting contact values in audit metadata.
+Administrators manage the singleton store record at `/admin/settings`. The page accepts the store name and description, contact phone and email, Instagram and Facebook profile links, address, active state, Arabic default locale, and a controlled currency code (`SAR`, `USD`, `EUR`, `ILS`, or `JOD`). Configured Instagram and Facebook links appear in the storefront footer. Updates require the server-side ADMIN authorization helper and are recorded in the existing audit log without putting contact values in audit metadata.
 
 Currency formatting is centralized in `apps/web/src/lib/storefront/format.ts`. Current product, cart, and checkout prices use `StoreSettings.currency`. If no supported currency is configured, the storefront marks prices unavailable and checkout/order creation is blocked; it never substitutes a production SAR value. Configure a currency in the admin page before taking real orders. Existing orders retain their stored currency snapshot.
 
@@ -12,7 +12,7 @@ The store active flag hides the catalog and prevents checkout while inactive. On
 
 ## Customer accounts and addresses
 
-Customers register at `/ar/register` and sign in through the existing Auth.js Credentials provider at `/ar/login`. Registration normalizes email, validates the password, and reuses the salted scrypt password hash. The server always creates a `CUSTOMER`; the registration form does not accept a role. Email stays immutable in this phase. `/ar/account` allows the signed-in customer to edit their name and links to order history and saved addresses.
+Customers register at `/ar/register` and sign in at `/ar/login` with a phone number and password. Registration normalizes and uniquely stores the phone number, validates the password, and reuses the salted scrypt password hash. The server always creates a `CUSTOMER`; the registration form does not accept a role. The phone number stays immutable in the profile. `/ar/account` allows the signed-in customer to edit their name and links to order history and saved addresses. Email fields remain available for optional store and order contact details, but are not used for account identity.
 
 At `/ar/account/addresses`, a customer can create, edit, delete, and choose a default address. Address queries and writes always use the authenticated user ID; a browser-supplied owner ID is never accepted. The database foreign key cascades addresses with their user, and a PostgreSQL partial unique index enforces at most one default address per user. Default changes and deletion/default reassignment are transactional.
 
@@ -36,13 +36,13 @@ Web runtime configuration requires:
 
 The `/api/health` response validates environment shape and reports only configuration status/issues; it does not expose secret values and does not perform a live database query. `.env.local` remains ignored. Example environment files contain blank placeholders only. Set the store currency separately through the protected settings page.
 
-The new migration is `prisma/migrations/20261002170000_phase7_store_accounts`. It adds the minimal store fields and customer addresses; older migrations are unchanged. Live PostgreSQL migration status and connection behavior remain unverified until a PostgreSQL service and `DATABASE_URL` are available.
+The phone account identity migration adds a unique account phone and backfills it from unambiguous existing customer phone numbers. Existing customer accounts with missing or duplicate numbers, and administrators without a linked customer phone, need a unique phone assigned before they can sign in after deployment. Live PostgreSQL migration status and connection behavior remain unverified until a PostgreSQL service and `DATABASE_URL` are available.
 
 ## Security and validation
 
 - Admin settings, SKU, and image mutations call the existing ADMIN helper and write important changes to the existing audit log.
-- Profile and address actions require a CUSTOMER session. Role, user ID, email, and password hash are not editable in profile forms.
-- Registration uses generic failure text for duplicate or otherwise failed account creation.
+- Profile and address actions require a CUSTOMER session. Role, user ID, phone number, and password hash are not editable in profile forms.
+- Registration identifies an already registered phone number; other failures use generic text.
 - Settings, addresses, SKU options, and image URLs are validated on the server. Image URLs must be HTTPS and cannot contain embedded credentials.
 - Errors sent to customers do not include raw database exceptions. Server logs contain error codes but no passwords, secrets, or session payloads.
 

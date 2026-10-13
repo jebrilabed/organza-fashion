@@ -264,8 +264,8 @@ export function ProductForm({
         )}
         <div className="admin-form__grid">
           <Input name="nameAr" label={messages.ar.productName} required maxLength={160} value={formValues.nameAr} onChange={(event) => setFormValues((current) => ({ ...current, nameAr: event.target.value }))} error={fieldError("nameAr")} />
-          <Input name="price" label={messages.ar.price} required type="number" min="0" max="9999999999.99" step="0.01" inputMode="decimal" value={formValues.price} onChange={(event) => setFormValues((current) => ({ ...current, price: event.target.value }))} error={fieldError("price")} />
-          <Input name="compareAtPrice" label={messages.ar.compareAtPrice} type="number" min="0" max="9999999999.99" step="0.01" inputMode="decimal" value={formValues.compareAtPrice} onChange={(event) => setFormValues((current) => ({ ...current, compareAtPrice: event.target.value }))} error={fieldError("compareAtPrice")} />
+          <Input name="price" label={messages.ar.price} required type="text" inputMode="decimal" dir="ltr" value={formValues.price} onChange={(event) => setFormValues((current) => ({ ...current, price: event.target.value }))} error={fieldError("price")} />
+          <Input name="compareAtPrice" label={messages.ar.compareAtPrice} type="text" inputMode="decimal" dir="ltr" value={formValues.compareAtPrice} onChange={(event) => setFormValues((current) => ({ ...current, compareAtPrice: event.target.value }))} error={fieldError("compareAtPrice")} />
           {!hasVariants && (
             <Input name="stockQuantity" label={messages.ar.stock} required type="number" min="0" max="999999999" step="1" inputMode="numeric" value={formValues.stockQuantity} onChange={(event) => setFormValues((current) => ({ ...current, stockQuantity: event.target.value }))} error={fieldError("stockQuantity")} />
           )}

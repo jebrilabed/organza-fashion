@@ -10,22 +10,22 @@ function form(values) {
   return data;
 }
 
-test("registration normalizes email and never accepts a client role", () => {
-  const parsed = parseRegistration(form({ name: " Sara ", email: "SARA@example.com", phone: "055 123 4567", addressLine: "Street 1", city: "Riyadh", password: "Pass1234", confirmation: "Pass1234", role: "ADMIN" }));
+test("registration normalizes phone and never accepts a client role", () => {
+  const parsed = parseRegistration(form({ name: " Sara ", phone: "055 123 4567", addressLine: "Street 1", city: "Riyadh", password: "Pass1234", confirmation: "Pass1234", role: "ADMIN" }));
   assert.equal(parsed.ok, true);
-  assert.deepEqual(parsed.value, { name: "Sara", email: "sara@example.com", phone: "0551234567", addressLine: "Street 1", city: "Riyadh", password: "Pass1234" });
+  assert.deepEqual(parsed.value, { name: "Sara", phone: "0551234567", addressLine: "Street 1", city: "Riyadh", password: "Pass1234" });
   assert.equal("role" in parsed.value, false);
 });
 
-test("registration accepts Arabic and Persian numerals in local mobile numbers", () => {
-  const parsed = parseRegistration(form({ name: "Sara", email: "sara@example.com", phone: "٠٥٥ ۱۲۳ ٤٥٦٧", addressLine: "Street 1", city: "Riyadh", password: "Pass1234", confirmation: "Pass1234" }));
+test("registration accepts Arabic and Persian numerals in mobile numbers", () => {
+  const parsed = parseRegistration(form({ name: "Sara", phone: "٠٥٥ ۱۲۳ ٤٥٦٧", addressLine: "Street 1", city: "Riyadh", password: "Pass1234", confirmation: "Pass1234" }));
   assert.equal(parsed.ok, true);
   assert.equal(parsed.value.phone, "0551234567");
 });
 
 test("registration rejects short or mismatched passwords", () => {
-  assert.equal(parseRegistration(form({ name: "Sara", email: "sara@example.com", password: "short", confirmation: "different" })).ok, false);
-  assert.equal(parseRegistration(form({ name: "Sara", email: "sara@example.com", password: "Pass123", confirmation: "Pass123" })).ok, false);
+  assert.equal(parseRegistration(form({ name: "Sara", password: "short", confirmation: "different" })).ok, false);
+  assert.equal(parseRegistration(form({ name: "Sara", password: "Pass123", confirmation: "Pass123" })).ok, false);
 });
 
 test("customer address validation requires bounded contact and location data", () => {
@@ -66,6 +66,20 @@ test("delivery zones normalize prices and reject duplicate or invalid rows", () 
   invalidPrice.append("deliveryZonePrice", "-1");
   assert.equal(parseDeliveryZones(invalidPrice).ok, false);
   assert.deepEqual(readDeliveryZones([{ name: "نابلس", price: "3.25" }, { name: "x", price: "bad" }]), []);
+});
+
+test("delivery and SKU prices accept Arabic and Persian numerals", () => {
+  const zones = new FormData();
+  zones.append("deliveryZoneName", "رام الله");
+  zones.append("deliveryZonePrice", "٧٫٥۰");
+  assert.deepEqual(parseDeliveryZones(zones), {
+    ok: true,
+    value: [{ name: "رام الله", price: "7.50" }],
+  });
+
+  const sku = parseSku(form({ skuCode: "DRESS-RED", price: "١٠٫٥٠", stockQuantity: "4", variantOptions: "{}" }));
+  assert.equal(sku.ok, true);
+  assert.equal(sku.value.price, "10.50");
 });
 
 test("SKU validation blocks negative values and malformed variant JSON", () => {

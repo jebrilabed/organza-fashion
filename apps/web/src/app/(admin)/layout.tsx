@@ -17,7 +17,7 @@ export default async function ProtectedAdminRoot({ children }: { children: React
 
   return (
     <html lang="ar" dir="rtl" data-scroll-behavior="smooth">
-      <body><ToastProvider><AdminShell email={user.email}>{children}</AdminShell></ToastProvider></body>
+      <body><ToastProvider><AdminShell phone={user.phone}>{children}</AdminShell></ToastProvider></body>
     </html>
   );
 }

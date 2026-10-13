@@ -4,19 +4,18 @@ import { AuthError } from "next-auth";
 import { signIn } from "@/auth";
 import type { LoginState } from "@/lib/auth/types";
 import { prisma } from "@/lib/db/prisma";
+import { normalizeAccountPhone } from "@/lib/auth/phone.mjs";
 
 const invalidCredentialsMessage = "تعذر تسجيل الدخول. تحقق من البيانات وحاول مرة أخرى.";
 
 export async function loginAction(_previousState: LoginState, formData: FormData): Promise<LoginState> {
-  const email = formData.get("email");
+  const phone = normalizeAccountPhone(formData.get("phone"));
   const password = formData.get("password");
   const returnToCheckout = formData.get("next") === "/ar/checkout";
 
   if (
-    typeof email !== "string" ||
+    !phone ||
     typeof password !== "string" ||
-    email.trim().length === 0 ||
-    email.length > 254 ||
     password.length < 8 ||
     password.length > 128
   ) {
@@ -25,11 +24,11 @@ export async function loginAction(_previousState: LoginState, formData: FormData
 
   try {
     const user = await prisma.user.findUnique({
-      where: { email: email.trim().toLowerCase() },
+      where: { phone },
       select: { role: true },
     });
     await signIn("credentials", {
-      email: email.trim(),
+      phone,
       password,
       redirectTo: user?.role === "ADMIN" ? "/admin" : returnToCheckout ? "/ar/checkout" : "/ar",
     });

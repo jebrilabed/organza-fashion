@@ -26,6 +26,13 @@ test("product input trims text, normalizes slug, and accepts valid catalog field
   assert.deepEqual(parsed.value.imageUrls, ["https://cdn.example.test/dress.jpg"]);
 });
 
+test("product prices accept Arabic and Persian numerals with Arabic decimal separators", () => {
+  const parsed = parseProductInput(form({ ...validProduct, price: "١٢٥٫٥٠", compareAtPrice: "۱۵۰" }));
+  assert.equal(parsed.ok, true);
+  assert.equal(parsed.value.price, "125.50");
+  assert.equal(parsed.value.compareAtPrice, "150.00");
+});
+
 test("product validation rejects empty names, bad slugs, negative prices, and fractional stock", () => {
   const parsed = parseProductInput(form({ ...validProduct, nameAr: "  ", slug: "bad slug", price: "-1", stockQuantity: "1.5" }));
   assert.equal(parsed.ok, false);
