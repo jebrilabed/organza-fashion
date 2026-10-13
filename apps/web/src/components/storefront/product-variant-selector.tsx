@@ -49,7 +49,7 @@ const STORE_POLICIES: Policy[] = [
   },
 ];
 
-function StorePolicies() {
+export function StorePolicies() {
   const [openPolicy, setOpenPolicy] = useState<string | null>(null);
   const active = STORE_POLICIES.find((p) => p.key === openPolicy) ?? null;
 

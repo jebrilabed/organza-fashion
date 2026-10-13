@@ -14,6 +14,7 @@ import { siteConfig } from "@/lib/config/site";
 import { getPublicSiteData, type PublicCategoryCrumb } from "@/lib/seo/site-data";
 import { buildBreadcrumbData, canonicalUrl } from "@/lib/seo/public-seo.mjs";
 import { SeoJsonLd, StoreBreadcrumbs } from "@/components/storefront/seo-json-ld";
+import { StorePolicies } from "@/components/storefront/product-variant-selector";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -147,6 +148,8 @@ export default async function StorefrontHome({ params, searchParams, categoryTra
                 </div>
               </div>
             </section>
+
+            <StorePolicies />
 
             {/* Brand Value Proposition Features Bar */}
             <section aria-label="مميزات المتجر" className="store-features">
