@@ -7,6 +7,7 @@ import { requireAdminPage } from "@/lib/auth/authorization";
 import { prisma } from "@/lib/db/prisma";
 import { OrderStatus } from "@/generated/prisma/enums";
 import { displayVariantOptions, formatMoney } from "@/lib/storefront/format";
+import { VariantOptionsDisplay } from "@/components/storefront/variant-options-display";
 import { orderStatusLabel } from "@/lib/storefront/order-labels";
 
 const periodOptions = ["24h", "7d", "30d", "all"] as const;
@@ -147,7 +148,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
           <thead><tr><th>{messages.ar.productName}</th><th>{messages.ar.variant}</th><th>{messages.ar.stock}</th></tr></thead>
           <tbody>{lowStockSkus.map((sku) => <tr key={sku.id}>
             <td><Link href={`/admin/products/${encodeURIComponent(sku.product.id)}`}>{sku.product.translations[0]?.name ?? sku.product.slug}</Link></td>
-            <td>{displayVariantOptions(sku.variantOptions) || messages.ar.noVariant}</td><td><Badge variant="warning">{sku.stockQuantity}</Badge></td>
+            <td>{displayVariantOptions(sku.variantOptions) ? <VariantOptionsDisplay options={sku.variantOptions} /> : messages.ar.noVariant}</td><td><Badge variant="warning">{sku.stockQuantity}</Badge></td>
           </tr>)}</tbody>
         </table></div> : <EmptyState title={messages.ar.noLowStockSkus} description={messages.ar.lowStockHint.replace("{threshold}", String(threshold))} action={<Link className="ui-button ui-button--outline" href="/admin/inventory">{messages.ar.inventory}</Link>} />}
       </section>

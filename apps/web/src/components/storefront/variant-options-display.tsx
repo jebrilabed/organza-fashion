@@ -10,7 +10,11 @@ export function VariantOptionsDisplay({ options }: { options: Prisma.JsonValue |
   const color = opts["Color"];
   const colorHex = opts["ColorHex"];
   const size = opts["Size"];
-  const colorIsHex = typeof color === 'string' && color.startsWith("#");
+  const colorValue = typeof color === "string" ? color.trim() : "";
+  const colorIsHex = /^#?[0-9a-f]{6}$/i.test(colorValue);
+  const normalizedColorHex = typeof colorHex === "string" && /^#?[0-9a-f]{6}$/i.test(colorHex.trim())
+    ? colorHex.trim().startsWith("#") ? colorHex.trim() : `#${colorHex.trim()}`
+    : colorIsHex ? (colorValue.startsWith("#") ? colorValue : `#${colorValue}`) : "";
 
   if (!color && !size) {
     const str = displayVariantOptions(options);
@@ -21,7 +25,7 @@ export function VariantOptionsDisplay({ options }: { options: Prisma.JsonValue |
     <span className="inline-flex items-center gap-1.5 text-sm">
       {color && (
         <span className="inline-flex items-center gap-1">
-          <span className="w-3.5 h-3.5 rounded-full border border-slate-300 shadow-sm" style={{ backgroundColor: colorHex || (colorIsHex ? color : '#000') }}></span>
+          <span className="w-3.5 h-3.5 rounded-full border border-slate-300 shadow-sm" style={{ backgroundColor: normalizedColorHex || colorValue || "#000000" }}></span>
           {!colorIsHex && <span>{color}</span>}
         </span>
       )}

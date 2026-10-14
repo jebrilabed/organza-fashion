@@ -1,10 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { adminMessages as messages } from "@/lib/admin/messages";
 
 export type ColorOption = { name: string; hex: string; imageUrl?: string };
 export type VariantQuantityMap = Record<string, number>; // key: `${colorName}|||${sizeLabel}`
+
+const COLOR_SUGGESTIONS = [
+  { name: "أسود", hex: "#000000" },
+  { name: "أبيض", hex: "#FFFFFF" },
+  { name: "أحمر", hex: "#E53935" },
+  { name: "أزرق", hex: "#1E88E5" },
+  { name: "أخضر", hex: "#43A047" },
+  { name: "أصفر", hex: "#FDD835" },
+  { name: "برتقالي", hex: "#FB8C00" },
+  { name: "وردي", hex: "#EC407A" },
+  { name: "بنفسجي", hex: "#8E24AA" },
+  { name: "بني", hex: "#795548" },
+  { name: "رمادي", hex: "#757575" },
+  { name: "ذهبي", hex: "#D4AF37" },
+  { name: "فضي", hex: "#C0C0C0" },
+  { name: "بيج", hex: "#D7C3A5" },
+  { name: "كحلي", hex: "#1A237E" },
+  { name: "فيروزي", hex: "#26A69A" },
+  { name: "خمري", hex: "#800020" },
+];
 
 type ProductVariantSectionProps = {
   hasVariants: boolean;
@@ -26,6 +46,7 @@ export function ProductVariantSection({
   initialQuantities,
   onChange,
 }: ProductVariantSectionProps) {
+  const colorSuggestionsId = useId();
   const [hasVariants, setHasVariants] = useState(initialHasVariants);
   const [colors, setColors] = useState<ColorOption[]>(initialColors);
   const [sizes, setSizes] = useState<string[]>(initialSizes);
@@ -34,6 +55,7 @@ export function ProductVariantSection({
   // New color inputs
   const [newColorName, setNewColorName] = useState("");
   const [newColorHex, setNewColorHex] = useState("#000000");
+  const colorSuggestions = [...COLOR_SUGGESTIONS, ...colors.filter((color) => !COLOR_SUGGESTIONS.some((suggestion) => suggestion.name.toLowerCase() === color.name.toLowerCase()))];
 
   // New size input
   const [newSizeLabel, setNewSizeLabel] = useState("");
@@ -215,10 +237,16 @@ export function ProductVariantSection({
             </h3>
             <div className="flex flex-wrap items-center gap-3">
               <input
+                list={colorSuggestionsId}
                 type="text"
                 placeholder={messages.ar.colorNamePlaceholder}
                 value={newColorName}
-                onChange={(e) => setNewColorName(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setNewColorName(value);
+                  const suggestion = colorSuggestions.find((color) => color.name.toLowerCase() === value.trim().toLowerCase());
+                  if (suggestion) setNewColorHex(suggestion.hex);
+                }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
@@ -227,6 +255,9 @@ export function ProductVariantSection({
                 }}
                 className="ui-input py-1 px-3 text-sm rounded border border-border bg-surface"
               />
+              <datalist id={colorSuggestionsId}>
+                {colorSuggestions.map((color) => <option key={color.name} value={color.name} />)}
+              </datalist>
               <div className="flex items-center gap-1 border border-border rounded p-1 bg-surface">
                 <input
                   type="color"
