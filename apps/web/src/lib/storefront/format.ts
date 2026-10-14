@@ -7,6 +7,12 @@ export function formatMoney(amount: Prisma.Decimal | string, currency: string, l
   return new Intl.NumberFormat(locale, { style: "currency", currency }).format(value.toNumber());
 }
 
+export function formatWholeMoney(amount: Prisma.Decimal | string, currency: string, locale = "ar-SA") {
+  const value = typeof amount === "string" ? new Prisma.Decimal(amount) : amount;
+  if (!supportedCurrencies.includes(currency)) return `${value.toDecimalPlaces(0).toFixed(0)} ${currency.slice(0, 3)}`;
+  return new Intl.NumberFormat(locale, { style: "currency", currency, maximumFractionDigits: 0 }).format(value.toNumber());
+}
+
 export function displayVariantOptions(value: Prisma.JsonValue | null) {
   if (!value || Array.isArray(value) || typeof value !== "object") return "";
   const record = value as Record<string, unknown>;

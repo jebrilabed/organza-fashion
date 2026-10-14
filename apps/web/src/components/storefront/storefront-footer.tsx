@@ -66,6 +66,12 @@ export async function StorefrontFooter() {
         <p className="store-footer__copyright">
           © {new Date().getFullYear()} {storeData.storeName || messages.ar.brand}. جميع الحقوق محفوظة.
         </p>
+        <div className="store-footer__credit">
+          <p>تنفيذ وتطوير الموقع: <strong>المهندس جبريل عابد</strong></p>
+          <a className="store-footer__whatsapp" href={whatsappUrl("+972593478714")} target="_blank" rel="noopener noreferrer" dir="ltr" aria-label="تواصل مع المهندس جبريل عابد عبر واتساب">
+            0593478714
+          </a>
+        </div>
       </div>
     </footer>
   );

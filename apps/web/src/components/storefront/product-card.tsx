@@ -2,7 +2,7 @@ import { SafeProductImage } from "@/components/storefront/safe-product-image";
 import Link from "next/link";
 import { Prisma } from "@/generated/prisma/client";
 import { Badge, Card } from "@/components/ui";
-import { formatMoney } from "@/lib/storefront/format";
+import { formatWholeMoney } from "@/lib/storefront/format";
 import { storefrontMessages as messages } from "@/lib/storefront/messages";
 import { addToCartAction } from "@/app/[locale]/(store)/actions";
 import { StorefrontSubmitButton } from "@/components/storefront/submit-button";
@@ -54,7 +54,7 @@ export function ProductCard({ product, currency }: ProductCardProps) {
         <h2><Link href={`/ar/products/${encodeURIComponent(translation.slug)}`}>{translation.name}</Link></h2>
         <div className="store-product-card__footer">
           <div className="store-product-card__price-box">
-            {minPrice && currency ? <div className="store-price-group"><strong>{formatMoney(minPrice, currency)}</strong>{compareAtPrice && <del aria-label={messages.ar.priceBeforeDiscount}>{formatMoney(compareAtPrice, currency)}</del>}</div> : <span className="store-muted">{currency ? messages.ar.unavailable : messages.ar.currencyUnavailable}</span>}
+            {minPrice && currency ? <div className="store-price-group"><strong>{formatWholeMoney(minPrice, currency)}</strong>{compareAtPrice && <del aria-label={messages.ar.priceBeforeDiscount}>{formatWholeMoney(compareAtPrice, currency)}</del>}</div> : <span className="store-muted">{currency ? messages.ar.unavailable : messages.ar.currencyUnavailable}</span>}
           </div>
           {quickAddSku ? (
             <form action={addToCartAction} className="store-product-card__quick-add">

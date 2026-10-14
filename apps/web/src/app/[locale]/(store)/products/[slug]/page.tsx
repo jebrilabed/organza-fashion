@@ -6,7 +6,7 @@ import { isLocale } from "@/lib/i18n/config";
 import { decodeRouteSlug } from "@/lib/i18n/route-slug";
 import { Locale, ProductStatus } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db/prisma";
-import { formatMoney } from "@/lib/storefront/format";
+import { formatWholeMoney } from "@/lib/storefront/format";
 import { storefrontMessages as messages } from "@/lib/storefront/messages";
 import type { Metadata } from "next";
 import { ProductGallery } from "@/components/storefront/product-gallery";
@@ -100,7 +100,7 @@ export default async function ProductDetails({ params }: { params: Promise<{ loc
             <header className="store-page-heading">
               {categoryTrail.at(-1)?.name && <p className="store-muted">{categoryTrail.at(-1)?.name}</p>}
               <h1>{translation.name}</h1>
-              {minimumPrice && currency ? <div className="store-product-detail__price"><p className="store-price">{messages.ar.startingAt} {formatMoney(minimumPrice, currency)}</p>{minimumCompareAtPrice && <del aria-label={messages.ar.priceBeforeDiscount}>{formatMoney(minimumCompareAtPrice, currency)}</del>}</div> : <p className="store-muted">{messages.ar.currencyUnavailable}</p>}
+              {minimumPrice && currency ? <div className="store-product-detail__price"><p className="store-price">{messages.ar.startingAt} {formatWholeMoney(minimumPrice, currency)}</p>{minimumCompareAtPrice && <del aria-label={messages.ar.priceBeforeDiscount}>{formatWholeMoney(minimumCompareAtPrice, currency)}</del>}</div> : <p className="store-muted">{messages.ar.currencyUnavailable}</p>}
               <Badge variant={productAvailabilityVariant(totalStock, product.availability)}>{productAvailabilityLabel(totalStock, product.availability, product.shippingDurationDays, true)}</Badge>
               {totalStock > 0 && totalStock <= 5 && <p className="store-muted">كمية محدودة</p>}
             </header>
@@ -112,8 +112,8 @@ export default async function ProductDetails({ params }: { params: Promise<{ loc
                   return {
                     id: sku.id,
                     price: sku.price.toString(),
-                    priceLabel: formatMoney(sku.price, currency),
-                    previousPriceLabel: sku.compareAtPrice?.greaterThan(sku.price) ? formatMoney(sku.compareAtPrice, currency) : null,
+                    priceLabel: formatWholeMoney(sku.price, currency),
+                    previousPriceLabel: sku.compareAtPrice?.greaterThan(sku.price) ? formatWholeMoney(sku.compareAtPrice, currency) : null,
                     stockQuantity: sku.stockQuantity,
                     colorName: opts["Color"],
                     colorHex: opts["ColorHex"],
