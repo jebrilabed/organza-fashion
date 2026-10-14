@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { adminMessages as messages } from "@/lib/admin/messages";
 
 export type ColorOption = { name: string; hex: string; imageUrl?: string };
@@ -73,11 +73,26 @@ function colorNameToHex(value: string) {
   return undefined;
 }
 
+function distributeStock(stockQuantity: number, colors: ColorOption[], sizes: string[]): VariantQuantityMap {
+  const keys = colors.length > 0 && sizes.length > 0
+    ? colors.flatMap((color) => sizes.map((size) => `${color.name}|||${size}`))
+    : colors.length > 0
+      ? colors.map((color) => `${color.name}|||`)
+      : sizes.map((size) => `|||${size}`);
+  if (keys.length === 0) return {};
+
+  const stock = Math.max(0, Math.floor(stockQuantity || 0));
+  const baseQuantity = Math.floor(stock / keys.length);
+  const remainder = stock % keys.length;
+  return Object.fromEntries(keys.map((key, index) => [key, baseQuantity + (index < remainder ? 1 : 0)]));
+}
+
 type ProductVariantSectionProps = {
   hasVariants: boolean;
   initialColors: ColorOption[];
   initialSizes: string[];
   initialQuantities: VariantQuantityMap;
+  totalStock: number;
   onChange: (data: {
     hasVariants: boolean;
     colors: ColorOption[];
@@ -91,6 +106,7 @@ export function ProductVariantSection({
   initialColors,
   initialSizes,
   initialQuantities,
+  totalStock: totalStockProp,
   onChange,
 }: ProductVariantSectionProps) {
   const colorSuggestionsId = useId();
@@ -98,6 +114,21 @@ export function ProductVariantSection({
   const [colors, setColors] = useState<ColorOption[]>(initialColors);
   const [sizes, setSizes] = useState<string[]>(initialSizes);
   const [quantities, setQuantities] = useState<VariantQuantityMap>(initialQuantities);
+
+  // Keep track of the user's intended total stock to distribute across cells
+  const targetStockRef = useRef(totalStockProp);
+  useEffect(() => {
+    if (totalStockProp > 0) {
+      targetStockRef.current = totalStockProp;
+    }
+  }, [totalStockProp]);
+
+  const getStockToDistribute = () => {
+    if (totalStockProp > 0) return totalStockProp;
+    if (targetStockRef.current > 0) return targetStockRef.current;
+    const currentSum = Object.values(quantities).reduce((a, b) => a + b, 0);
+    return currentSum > 0 ? currentSum : 0;
+  };
 
   // New color inputs
   const [newColorName, setNewColorName] = useState("");
@@ -132,9 +163,30 @@ export function ProductVariantSection({
     }
   };
 
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const rawQuantity = (event as CustomEvent<string>).detail;
+      const stockQuantity = Number.parseInt(rawQuantity, 10) || 0;
+      targetStockRef.current = stockQuantity;
+      if (!hasVariants || (colors.length === 0 && sizes.length === 0)) return;
+      const nextQuantities = distributeStock(stockQuantity, colors, sizes);
+      setQuantities(nextQuantities);
+      updateParent(hasVariants, colors, sizes, nextQuantities);
+    };
+    window.addEventListener("productStockQuantityCommitted", handler);
+    return () => window.removeEventListener("productStockQuantityCommitted", handler);
+  }, [colors, hasVariants, sizes]);
+
   const handleToggleHasVariants = (checked: boolean) => {
     setHasVariants(checked);
-    updateParent(checked, colors, sizes, quantities);
+    if (checked && (colors.length > 0 || sizes.length > 0)) {
+      const stockToUse = getStockToDistribute();
+      const nextQuantities = distributeStock(stockToUse, colors, sizes);
+      setQuantities(nextQuantities);
+      updateParent(checked, colors, sizes, nextQuantities);
+    } else {
+      updateParent(checked, colors, sizes, quantities);
+    }
   };
 
   const handleAddColor = () => {
@@ -150,14 +202,8 @@ export function ProductVariantSection({
     setNewColorName("");
     setNewColorHex("#000000");
 
-    // Initialize quantities for new color with all existing sizes (default 0)
-    const nextQuantities = { ...quantities };
-    for (const size of sizes) {
-      const key = `${trimmed}|||${size}`;
-      if (!(key in nextQuantities)) {
-        nextQuantities[key] = 0;
-      }
-    }
+    const stockToUse = getStockToDistribute();
+    const nextQuantities = distributeStock(stockToUse, nextColors, sizes);
     setQuantities(nextQuantities);
     updateParent(hasVariants, nextColors, sizes, nextQuantities);
   };
@@ -188,7 +234,10 @@ export function ProductVariantSection({
   const handleRemoveColor = (colorName: string) => {
     const nextColors = colors.filter((c) => c.name.toLowerCase() !== colorName.toLowerCase());
     setColors(nextColors);
-    updateParent(hasVariants, nextColors, sizes, quantities);
+    const stockToUse = getStockToDistribute();
+    const nextQuantities = distributeStock(stockToUse, nextColors, sizes);
+    setQuantities(nextQuantities);
+    updateParent(hasVariants, nextColors, sizes, nextQuantities);
   };
 
   const handleAddSize = () => {
@@ -200,14 +249,8 @@ export function ProductVariantSection({
     setSizes(nextSizes);
     setNewSizeLabel("");
 
-    // Initialize quantities for new size with all existing colors (default 0)
-    const nextQuantities = { ...quantities };
-    for (const color of colors) {
-      const key = `${color.name}|||${trimmed}`;
-      if (!(key in nextQuantities)) {
-        nextQuantities[key] = 0;
-      }
-    }
+    const stockToUse = getStockToDistribute();
+    const nextQuantities = distributeStock(stockToUse, colors, nextSizes);
     setQuantities(nextQuantities);
     updateParent(hasVariants, colors, nextSizes, nextQuantities);
   };
@@ -215,7 +258,10 @@ export function ProductVariantSection({
   const handleRemoveSize = (sizeLabel: string) => {
     const nextSizes = sizes.filter((s) => s.toLowerCase() !== sizeLabel.toLowerCase());
     setSizes(nextSizes);
-    updateParent(hasVariants, colors, nextSizes, quantities);
+    const stockToUse = getStockToDistribute();
+    const nextQuantities = distributeStock(stockToUse, colors, nextSizes);
+    setQuantities(nextQuantities);
+    updateParent(hasVariants, colors, nextSizes, nextQuantities);
   };
 
   const handleQuantityChange = (colorName: string, sizeLabel: string, value: string) => {
@@ -223,19 +269,21 @@ export function ProductVariantSection({
     const key = `${colorName}|||${sizeLabel}`;
     const nextQuantities = { ...quantities, [key]: parsed };
     setQuantities(nextQuantities);
+    const newSum = Object.values(nextQuantities).reduce((a, b) => a + b, 0);
+    targetStockRef.current = newSum;
     updateParent(hasVariants, colors, sizes, nextQuantities);
   };
 
   // Build variants array for hidden form field submission
   const variantsList = [];
-  let totalStock = 0;
+  let calculatedTotalStock = 0;
 
   if (colors.length > 0 && sizes.length > 0) {
     for (const color of colors) {
       for (const size of sizes) {
         const key = `${color.name}|||${size}`;
         const qty = quantities[key] ?? 0;
-        totalStock += qty;
+        calculatedTotalStock += qty;
         variantsList.push({
           colorName: color.name,
           colorHex: color.hex,
@@ -249,7 +297,7 @@ export function ProductVariantSection({
     for (const color of colors) {
       const key = `${color.name}|||`;
       const qty = quantities[key] ?? 0;
-      totalStock += qty;
+      calculatedTotalStock += qty;
       variantsList.push({
         colorName: color.name,
         colorHex: color.hex,
@@ -262,7 +310,7 @@ export function ProductVariantSection({
     for (const size of sizes) {
       const key = `|||${size}`;
       const qty = quantities[key] ?? 0;
-      totalStock += qty;
+      calculatedTotalStock += qty;
       variantsList.push({
         colorName: "",
         colorHex: "#000000",
@@ -462,9 +510,26 @@ export function ProductVariantSection({
                 <h3 className="font-semibold text-md text-text">
                   {messages.ar.inventoryMatrix}
                 </h3>
-                <span className="text-xs font-medium bg-secondary text-primary px-2.5 py-1 rounded-md border border-border">
-                  {messages.ar.totalCalculatedStock}: <strong>{totalStock}</strong>
-                </span>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const stockToUse = getStockToDistribute();
+                      if (stockToUse > 0) {
+                        const nextQuantities = distributeStock(stockToUse, colors, sizes);
+                        setQuantities(nextQuantities);
+                        updateParent(hasVariants, colors, sizes, nextQuantities);
+                      }
+                    }}
+                    className="text-xs text-[var(--color-primary)] hover:underline flex items-center gap-1 cursor-pointer"
+                    title="إعادة توزيع المخزون الكلي بالتساوي على جميع الخلايا"
+                  >
+                    ↻ إعادة التوزيع بالتساوي
+                  </button>
+                  <span className="text-xs font-medium bg-secondary text-primary px-2.5 py-1 rounded-md border border-border">
+                    {messages.ar.totalCalculatedStock}: <strong>{calculatedTotalStock}</strong>
+                  </span>
+                </div>
               </div>
 
               {colors.length > 0 && sizes.length > 0 && (

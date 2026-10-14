@@ -275,9 +275,17 @@ export function ProductForm({
             <option value="IN_TRANSIT">قيد الشحن</option>
           </Select>
           {availability === "IN_TRANSIT" && <Input name="shippingDurationDays" label="مدة الشحن المتوقعة (بالأيام)" required type="number" min="1" max="365" step="1" inputMode="numeric" value={shippingDurationDays} onChange={(event) => setShippingDurationDays(event.target.value)} error={fieldError("shippingDurationDays")} />}
-          {!hasVariants && (
-            <Input name="stockQuantity" label={messages.ar.stock} required type="number" min="0" max="999999999" step="1" inputMode="numeric" value={formValues.stockQuantity} onChange={(event) => setFormValues((current) => ({ ...current, stockQuantity: event.target.value }))} error={fieldError("stockQuantity")} />
-          )}
+          <Input name="stockQuantity" label={messages.ar.stock} required type="number" min="0" max="999999999" step="1" inputMode="numeric" value={formValues.stockQuantity} onChange={(event) => {
+            const val = event.target.value;
+            setFormValues((current) => ({ ...current, stockQuantity: val }));
+            if (hasVariants) {
+              window.dispatchEvent(new CustomEvent("productStockQuantityCommitted", { detail: val }));
+            }
+          }} onBlur={(event) => {
+            if (hasVariants) {
+              window.dispatchEvent(new CustomEvent("productStockQuantityCommitted", { detail: event.currentTarget.value }));
+            }
+          }} error={fieldError("stockQuantity")} />
           <Select name="categoryId" label={messages.ar.category} value={formValues.categoryId} onChange={(event) => setFormValues((current) => ({ ...current, categoryId: event.target.value }))} error={fieldError("categoryId")}>
             <option value="">{messages.ar.noCategory}</option>
             {categories.map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}
@@ -348,12 +356,15 @@ export function ProductForm({
           initialColors={values.initialColors ?? []}
           initialSizes={values.initialSizes ?? []}
           initialQuantities={values.initialQuantities ?? {}}
+          totalStock={Number.parseInt(formValues.stockQuantity, 10) || 0}
           onChange={(vData) => {
             setHasVariants(vData.hasVariants);
             setVariantColors(vData.colors);
-            if (vData.hasVariants) {
+            if (vData.hasVariants && (vData.colors.length > 0 || vData.sizes.length > 0)) {
               const total = Object.values(vData.quantities).reduce((a, b) => a + b, 0);
-              setFormValues((curr) => ({ ...curr, stockQuantity: String(total) }));
+              if (total > 0) {
+                setFormValues((curr) => ({ ...curr, stockQuantity: String(total) }));
+              }
             }
           }}
         />
