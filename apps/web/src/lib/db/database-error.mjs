@@ -203,10 +203,16 @@ export function diagnoseDatabaseError(error, connectionString) {
     code === "53400" ||
     lowerMsg.includes("connection pool") ||
     lowerMsg.includes("too many connections") ||
-    lowerMsg.includes("pool exhausted")
+    lowerMsg.includes("pool exhausted") ||
+    lowerMsg.includes("timeout exceeded when trying to connect")
   ) {
-    const detail = "تجاوز عدد الاتصالات المتزامنة الحد الأقصى المسموح به في تجمع الاتصالات (Connection Pool Exhausted).";
-    const suggestion = "تأكد من استخدام منفذ Supabase Pooler (6543/5432) واضبط سعة التجمع عبر DATABASE_POOL_MAX بما يناسب خادمك.";
+    const poolWaitTimedOut = lowerMsg.includes("timeout exceeded when trying to connect");
+    const detail = poolWaitTimedOut
+      ? "انتهت مهلة انتظار اتصال متاح من تجمع اتصالات PostgreSQL. قد تكون الاتصالات مشغولة بطلبات أخرى."
+      : "تجاوز عدد الاتصالات المتزامنة الحد الأقصى المسموح به في تجمع اتصالات PostgreSQL.";
+    const suggestion = poolWaitTimedOut
+      ? "قلّل الاستعلامات المتزامنة، وتأكد من إغلاق المعاملات بعد انتهائها. إذا استمر الخطأ، راجع DATABASE_POOL_MAX وDATABASE_CONNECTION_TIMEOUT_MS وحدود الاتصالات في قاعدة البيانات."
+      : "تأكد من استخدام منفذ Supabase Pooler (6543/5432) واضبط سعة التجمع عبر DATABASE_POOL_MAX بما يناسب خادمك.";
     return {
       isDatabaseError: true,
       category: "POOL",

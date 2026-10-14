@@ -34,21 +34,19 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     ...(status ? { status: status as "ACTIVE" | "DRAFT" | "ARCHIVED" } : {}),
     ...(query ? { translations: { some: { locale: "AR" as const, name: { contains: query, mode: "insensitive" as const } } } } : {}),
   };
-  const [total, products] = await Promise.all([
-    prisma.product.count({ where }),
-    prisma.product.findMany({
-      where,
-      orderBy: { updatedAt: "desc" },
-      skip: (page - 1) * ADMIN_PAGE_SIZE,
-      take: ADMIN_PAGE_SIZE,
-      include: {
-        translations: { where: { locale: "AR" }, take: 1 },
-        category: { include: { translations: { where: { locale: "AR" }, take: 1 } } },
-        skus: { orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }], take: 1, select: { price: true, stockQuantity: true } },
-        images: { orderBy: { sortOrder: "asc" }, take: 1 },
-      },
-    }),
-  ]);
+  const total = await prisma.product.count({ where });
+  const products = await prisma.product.findMany({
+    where,
+    orderBy: { updatedAt: "desc" },
+    skip: (page - 1) * ADMIN_PAGE_SIZE,
+    take: ADMIN_PAGE_SIZE,
+    include: {
+      translations: { where: { locale: "AR" }, take: 1 },
+      category: { include: { translations: { where: { locale: "AR" }, take: 1 } } },
+      skus: { orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }], take: 1, select: { price: true, stockQuantity: true } },
+      images: { orderBy: { sortOrder: "asc" }, take: 1 },
+    },
+  });
   const totalPages = Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE));
 
   return (

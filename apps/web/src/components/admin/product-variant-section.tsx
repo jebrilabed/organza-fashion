@@ -26,6 +26,53 @@ const COLOR_SUGGESTIONS = [
   { name: "خمري", hex: "#800020" },
 ];
 
+const COLOR_NAME_ALIASES: Record<string, string> = {
+  زهري: "#EC407A",
+  روز: "#EC407A",
+  موف: "#8E24AA",
+  ليلكي: "#8E24AA",
+  سماوي: "#87CEEB",
+  لبني: "#87CEEB",
+  زيتي: "#556B2F",
+  نبيتي: "#800020",
+};
+
+function normalizeColorName(value: string) {
+  return value.trim().toLocaleLowerCase().replace(/[أإآ]/g, "ا").replace(/ى/g, "ي");
+}
+
+function colorNameToHex(value: string) {
+  const trimmed = value.trim();
+  const normalized = normalizeColorName(trimmed);
+  const suggestion = COLOR_SUGGESTIONS.find((color) => normalizeColorName(color.name) === normalized);
+  if (suggestion) return suggestion.hex;
+  if (COLOR_NAME_ALIASES[normalized]) return COLOR_NAME_ALIASES[normalized];
+
+  const hexMatch = trimmed.match(/^#?([\da-f]{3}|[\da-f]{6})$/i);
+  if (hexMatch) {
+    const digits = hexMatch[1].length === 3
+      ? hexMatch[1].split("").map((digit) => `${digit}${digit}`).join("")
+      : hexMatch[1];
+    return `#${digits.toUpperCase()}`;
+  }
+
+  // Also accept standard CSS color names such as "navy" or "coral".
+  if (typeof CSS !== "undefined" && CSS.supports("color", trimmed) && normalized !== "transparent" && normalized !== "currentcolor") {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1;
+    canvas.height = 1;
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    if (context) {
+      context.fillStyle = trimmed;
+      context.fillRect(0, 0, 1, 1);
+      const [red, green, blue] = context.getImageData(0, 0, 1, 1).data;
+      return `#${[red, green, blue].map((channel) => channel.toString(16).padStart(2, "0")).join("").toUpperCase()}`;
+    }
+  }
+
+  return undefined;
+}
+
 type ProductVariantSectionProps = {
   hasVariants: boolean;
   initialColors: ColorOption[];
@@ -55,7 +102,15 @@ export function ProductVariantSection({
   // New color inputs
   const [newColorName, setNewColorName] = useState("");
   const [newColorHex, setNewColorHex] = useState("#000000");
+  const [activeColorSuggestion, setActiveColorSuggestion] = useState(0);
   const colorSuggestions = [...COLOR_SUGGESTIONS, ...colors.filter((color) => !COLOR_SUGGESTIONS.some((suggestion) => suggestion.name.toLowerCase() === color.name.toLowerCase()))];
+  const matchingColorSuggestions = newColorName.trim()
+    ? colorSuggestions.filter((color) => {
+      const normalizedName = normalizeColorName(color.name);
+      const normalizedQuery = normalizeColorName(newColorName);
+      return normalizedName !== normalizedQuery && normalizedName.includes(normalizedQuery);
+    }).slice(0, 6)
+    : [];
 
   // New size input
   const [newSizeLabel, setNewSizeLabel] = useState("");
@@ -105,6 +160,11 @@ export function ProductVariantSection({
     }
     setQuantities(nextQuantities);
     updateParent(hasVariants, nextColors, sizes, nextQuantities);
+  };
+
+  const selectColorSuggestion = (color: ColorOption) => {
+    setNewColorName(color.name);
+    setNewColorHex(color.hex);
   };
 
   const uploadColorImage = async (colorName: string, event: React.ChangeEvent<HTMLInputElement>) => {
@@ -236,28 +296,70 @@ export function ProductVariantSection({
               {messages.ar.manageColors}
             </h3>
             <div className="flex flex-wrap items-center gap-3">
-              <input
-                list={colorSuggestionsId}
-                type="text"
-                placeholder={messages.ar.colorNamePlaceholder}
-                value={newColorName}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setNewColorName(value);
-                  const suggestion = colorSuggestions.find((color) => color.name.toLowerCase() === value.trim().toLowerCase());
-                  if (suggestion) setNewColorHex(suggestion.hex);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleAddColor();
-                  }
-                }}
-                className="ui-input py-1 px-3 text-sm rounded border border-border bg-surface"
-              />
-              <datalist id={colorSuggestionsId}>
-                {colorSuggestions.map((color) => <option key={color.name} value={color.name} />)}
-              </datalist>
+              <div className="relative">
+                <input
+                  id={colorSuggestionsId}
+                  type="text"
+                  autoComplete="off"
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-haspopup="listbox"
+                  aria-expanded={matchingColorSuggestions.length > 0}
+                  aria-controls={matchingColorSuggestions.length > 0 ? `${colorSuggestionsId}-options` : undefined}
+                  aria-activedescendant={matchingColorSuggestions.length > 0 ? `${colorSuggestionsId}-option-${activeColorSuggestion}` : undefined}
+                  placeholder={messages.ar.colorNamePlaceholder}
+                  value={newColorName}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setNewColorName(value);
+                    setActiveColorSuggestion(0);
+                    const existingColor = colors.find((color) => normalizeColorName(color.name) === normalizeColorName(value));
+                    const detectedHex = existingColor?.hex ?? colorNameToHex(value);
+                    if (detectedHex) setNewColorHex(detectedHex);
+                  }}
+                  onKeyDown={(e) => {
+                    if (matchingColorSuggestions.length > 0 && e.key === "ArrowDown") {
+                      e.preventDefault();
+                      setActiveColorSuggestion((current) => (current + 1) % matchingColorSuggestions.length);
+                      return;
+                    }
+                    if (matchingColorSuggestions.length > 0 && e.key === "ArrowUp") {
+                      e.preventDefault();
+                      setActiveColorSuggestion((current) => (current - 1 + matchingColorSuggestions.length) % matchingColorSuggestions.length);
+                      return;
+                    }
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (matchingColorSuggestions[activeColorSuggestion]) {
+                        selectColorSuggestion(matchingColorSuggestions[activeColorSuggestion]);
+                        return;
+                      }
+                      handleAddColor();
+                    }
+                  }}
+                  className="ui-input py-1 px-3 text-sm rounded border border-border bg-surface"
+                />
+                {matchingColorSuggestions.length > 0 && (
+                  <div id={`${colorSuggestionsId}-options`} role="listbox" className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded border border-border bg-surface p-1 shadow-lg">
+                    {matchingColorSuggestions.map((color, index) => (
+                      <div
+                        id={`${colorSuggestionsId}-option-${index}`}
+                        key={color.name}
+                        role="option"
+                        aria-selected={index === activeColorSuggestion}
+                        tabIndex={-1}
+                        onMouseMove={() => setActiveColorSuggestion(index)}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => selectColorSuggestion(color)}
+                        className={`flex w-full items-center gap-2 rounded px-2 py-1.5 text-right text-sm ${index === activeColorSuggestion ? "bg-secondary" : "hover:bg-secondary"}`}
+                      >
+                        <span aria-hidden="true" className="h-4 w-4 rounded-full border border-black/20" style={{ backgroundColor: color.hex }} />
+                        <span>{color.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               <div className="flex items-center gap-1 border border-border rounded p-1 bg-surface">
                 <input
                   type="color"

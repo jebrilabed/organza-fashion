@@ -7,7 +7,9 @@ export function databasePoolConfig(env = process.env) {
   const serverless = Boolean(env.VERCEL || env.AWS_LAMBDA_FUNCTION_NAME);
   return {
     max: boundedInteger(env.DATABASE_POOL_MAX, serverless ? 1 : 10, 1, 20),
-    connectionTimeoutMillis: boundedInteger(env.DATABASE_CONNECTION_TIMEOUT_MS, 10_000, 1_000, 60_000),
+    // Wait longer than the longest interactive transaction so queued queries
+    // can reuse the connection once that transaction finishes or times out.
+    connectionTimeoutMillis: boundedInteger(env.DATABASE_CONNECTION_TIMEOUT_MS, 40_000, 1_000, 60_000),
     idleTimeoutMillis: boundedInteger(env.DATABASE_IDLE_TIMEOUT_MS, 30_000, 5_000, 300_000),
     query_timeout: boundedInteger(env.DATABASE_QUERY_TIMEOUT_MS, 15_000, 1_000, 120_000),
     keepAlive: true,

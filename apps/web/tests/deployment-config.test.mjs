@@ -27,14 +27,14 @@ test("production readiness accepts only a public HTTPS SITE_URL", () => {
 test("database pool is bounded for serverless and supports safe tuning", () => {
   assert.deepEqual(databasePoolConfig({ VERCEL: "1" }), {
     max: 1,
-    connectionTimeoutMillis: 10_000,
+    connectionTimeoutMillis: 40_000,
     idleTimeoutMillis: 30_000,
     query_timeout: 15_000,
     keepAlive: true,
   });
   assert.equal(databasePoolConfig({ VERCEL: "1", DATABASE_POOL_MAX: "99" }).max, 20);
   assert.equal(databasePoolConfig({ DATABASE_POOL_MAX: "2", DATABASE_CONNECTION_TIMEOUT_MS: "bad" }).max, 2);
-  assert.equal(databasePoolConfig({ DATABASE_POOL_MAX: "2", DATABASE_CONNECTION_TIMEOUT_MS: "bad" }).connectionTimeoutMillis, 10_000);
+  assert.equal(databasePoolConfig({ DATABASE_POOL_MAX: "2", DATABASE_CONNECTION_TIMEOUT_MS: "bad" }).connectionTimeoutMillis, 40_000);
 });
 
 test("remote database URLs require TLS and support explicit CA verification", () => {
