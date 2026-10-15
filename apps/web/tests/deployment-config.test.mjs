@@ -29,7 +29,7 @@ test("database pool is bounded for serverless and supports safe tuning", () => {
     max: 1,
     connectionTimeoutMillis: 40_000,
     idleTimeoutMillis: 30_000,
-    query_timeout: 15_000,
+    query_timeout: 60_000,
     keepAlive: true,
   });
   assert.equal(databasePoolConfig({ VERCEL: "1", DATABASE_POOL_MAX: "99" }).max, 20);

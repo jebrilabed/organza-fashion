@@ -16,6 +16,7 @@ import { buildBreadcrumbData, canonicalUrl } from "@/lib/seo/public-seo.mjs";
 import { SeoJsonLd, StoreBreadcrumbs } from "@/components/storefront/seo-json-ld";
 import { StorePolicies } from "@/components/storefront/product-variant-selector";
 import { HomeEditorialCarousel } from "@/components/storefront/home-editorial-carousel";
+import { HomeCategoryImage } from "@/components/storefront/home-category-image";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -104,8 +105,6 @@ export default async function StorefrontHome({ params, searchParams, categoryTra
   const currency = storeData.currency;
   const pages = Math.max(1, Math.ceil(total / STOREFRONT_PAGE_SIZE));
   const heroProduct = products.find((product) => product.featured && product.images[0]) ?? products.find((product) => product.images[0]) ?? null;
-  const editorialProduct = products.find((product) => product.slug !== heroProduct?.slug && product.images[0]) ?? null;
-  const editorialTranslation = editorialProduct?.translations[0];
   const productMainImages = products.flatMap((product) => product.images[0] ? [{ url: product.images[0].url }] : []);
   const editorialImages = Array.from(new Map((storeData.homeEditorialImages.length ? storeData.homeEditorialImages : productMainImages).map((image) => [image.url, image])).values()).slice(0, 8);
   const isHomeView = showHomeHero && !query && !categorySlug && page === 1 && categoryTrail.length === 0;
@@ -140,9 +139,9 @@ export default async function StorefrontHome({ params, searchParams, categoryTra
                 </p>
                 <p className="store-home__loyalty-offer">للعملاء المسجّلين: بعد كل 4 طلبات، خصم 15% على الطلب الخامس.</p>
                 <div className="store-home__hero-actions">
-                  <Link className="ui-button ui-button--primary ui-button--large" href="/ar/products">
+                  <span className="ui-button ui-button--primary ui-button--large">
                     استكشف التشكيلة
-                  </Link>
+                  </span>
                 </div>
               </div>
               <div className="store-home__hero-visual">
@@ -205,9 +204,7 @@ export default async function StorefrontHome({ params, searchParams, categoryTra
               const categoryProduct = category.products[0];
               const image = categoryProduct?.images[0];
               return <Link href={`/ar/categories/${encodeURIComponent(translation.slug)}`} key={translation.slug}>
-                <span className="store-home__category-image">
-                  {image ? <SafeProductImage alt={image.altText || categoryProduct?.translations[0]?.name || translation.name} sizes="(max-width: 640px) 50vw, 23vw" src={image.url} /> : <span aria-hidden="true">✦</span>}
-                </span>
+                {image ? <HomeCategoryImage alt={image.altText || categoryProduct?.translations[0]?.name || translation.name} sizes="(max-width: 640px) 50vw, 23vw" src={image.url} /> : <span aria-hidden="true" className="store-home__category-image">✦</span>}
                 <span className="store-home__category-name">{translation.name}</span>
               </Link>;
             }))}
@@ -221,7 +218,7 @@ export default async function StorefrontHome({ params, searchParams, categoryTra
             {storeData.homeEditorialCopy.eyebrow && <p>{storeData.homeEditorialCopy.eyebrow}</p>}
             {storeData.homeEditorialCopy.title && <h2>{storeData.homeEditorialCopy.title}</h2>}
             {storeData.homeEditorialCopy.description && <span>{storeData.homeEditorialCopy.description}</span>}
-            <Link href={editorialTranslation ? `/ar/products/${encodeURIComponent(editorialTranslation.slug)}` : "/ar/products"}>{storeData.homeEditorialCopy.ctaLabel} <span aria-hidden="true">←</span></Link>
+            <span className="store-home__editorial-cta">{storeData.homeEditorialCopy.ctaLabel} <span aria-hidden="true">←</span></span>
           </div>
         </section>}
         <section className={isHomeView ? "store-home__section store-home__catalogue" : "store-catalogue"}>
