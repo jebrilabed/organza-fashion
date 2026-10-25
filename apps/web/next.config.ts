@@ -1,8 +1,16 @@
+import path from "node:path";
 import type { NextConfig } from "next";
+import { fileURLToPath } from "node:url";
+
+const appDirectory = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   agentRules: false,
+  outputFileTracingRoot: path.join(appDirectory, "../.."),
+  outputFileTracingIncludes: {
+    "/*": ["./src/generated/prisma/**/*"],
+  },
   experimental: { serverActions: { bodySizeLimit: "5mb" } },
   async headers() {
     const securityHeaders = [

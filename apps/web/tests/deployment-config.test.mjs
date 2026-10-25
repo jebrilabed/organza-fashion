@@ -68,7 +68,10 @@ test("Vercel uses the monorepo root and generates Prisma Client before building"
   const config = JSON.parse(await readFile(new URL("../../../vercel.json", import.meta.url), "utf8"));
   assert.equal(config.framework, "nextjs");
   assert.equal(config.installCommand, "npm ci");
-  assert.match(config.buildCommand, /db:generate.*npm run build/);
+  assert.match(config.buildCommand, /db:generate.*npm run build:web/);
+  const nextConfig = await readFile(new URL("../next.config.ts", import.meta.url), "utf8");
+  assert.match(nextConfig, /outputFileTracingRoot/);
+  assert.match(nextConfig, /src\/generated\/prisma/);
 });
 
 test("AI container binds to the platform port and excludes local environment files", async () => {
