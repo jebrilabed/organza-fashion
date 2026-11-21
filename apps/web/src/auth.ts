@@ -73,6 +73,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   logger: {
     error(error) {
       if (error instanceof AuthError) {
+        if (error.type === "JWTSessionError") {
+          // JWTSessionError occurs normally when a visitor or client presents an
+          // expired, rotated, or invalid session cookie. Auth.js safely cleans the
+          // cookie and fails closed. Logging with console.warn keeps server logs
+          // informative without triggering Next.js dev error overlays on page render.
+          console.warn(`Auth.js session notice (${error.type}): invalid or expired session token presented.`);
+          return;
+        }
         // AuthError types are safe to record and identify configuration failures
         // without logging credentials or request payloads.
         console.error(`Auth.js request failed (${error.type}).`);
