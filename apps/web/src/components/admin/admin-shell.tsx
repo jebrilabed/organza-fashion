@@ -11,7 +11,7 @@ export function AdminShell({ children, phone }: { children: React.ReactNode; pho
       <aside className="admin-sidebar" aria-label={messages.ar.admin}>
         <Link className="admin-brand" href="/admin" aria-label={messages.ar.admin}>
           <span className="admin-brand__mark">
-            <Image alt="" height={48} src="/brand/organza-fashion.png" width={48} />
+            <Image alt="" height={48} src="/brand/organza-fashion.png" unoptimized width={48} />
           </span>
           <span><strong>{messages.ar.brand}</strong><small>{messages.ar.admin}</small></span>
         </Link>
@@ -31,7 +31,7 @@ export function AdminShell({ children, phone }: { children: React.ReactNode; pho
         <header className="admin-mobile-header">
           <Link href="/admin" aria-label={messages.ar.admin} className="admin-brand admin-brand--compact">
             <span className="admin-brand__mark">
-              <Image alt="" height={48} src="/brand/organza-fashion.png" width={48} />
+              <Image alt="" height={48} src="/brand/organza-fashion.png" unoptimized width={48} />
             </span>
           </Link>
           <div className="admin-mobile-header__tools">

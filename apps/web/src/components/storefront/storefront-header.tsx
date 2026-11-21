@@ -44,7 +44,7 @@ export async function StorefrontHeader() {
       <div className="page-container store-header__inner">
         <Link href="/ar" className="store-brand" aria-label={`${storeName} — ${messages.ar.home}`}>
           <span className="store-brand__mark">
-            <Image alt="" height={60} src="/brand/organza-fashion.png" width={60} />
+            <Image alt="" height={60} src="/brand/organza-fashion.png" unoptimized width={60} />
           </span>
           <span className="store-brand__name">{storeName}</span>
         </Link>

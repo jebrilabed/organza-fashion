@@ -147,7 +147,7 @@ export default async function StorefrontHome({ params, searchParams, categoryTra
               <div className="store-home__hero-visual">
                 <span className="store-home__hero-orbit" />
                 <div className="store-home__hero-brand">
-                  <Image alt={storeData.storeName || messages.ar.brand} className="store-home__hero-logo" height={640} priority src="/brand/organza-fashion.png" width={640} />
+                  <Image alt={storeData.storeName || messages.ar.brand} className="store-home__hero-logo" height={320} priority src="/brand/organza-fashion.png" unoptimized width={320} />
                 </div>
               </div>
             </section>

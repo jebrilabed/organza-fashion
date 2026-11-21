@@ -22,7 +22,7 @@ export async function StorefrontFooter() {
         <div className="store-footer__brand">
           <Link href="/ar" className="store-footer__brand-link">
             <span className="store-footer__logo-mark">
-              <Image alt="" height={48} src="/brand/organza-fashion.png" width={48} />
+              <Image alt="" height={48} src="/brand/organza-fashion.png" unoptimized width={48} />
             </span>
             <span className="store-footer__wordmark">{storeData.storeName || messages.ar.brand}</span>
           </Link>

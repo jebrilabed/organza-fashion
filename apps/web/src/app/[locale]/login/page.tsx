@@ -28,7 +28,7 @@ export default async function LoginPage({ params, searchParams }: LoginPageProps
           <Card className="auth-page__card flex flex-col gap-6 p-6 sm:p-8">
             <div className="flex flex-col gap-2 text-start">
               <p className="auth-page__brand">
-                <span className="auth-page__mark"><Image alt="" height={48} src="/brand/organza-fashion.png" width={48} /></span>
+                <span className="auth-page__mark"><Image alt="" height={48} src="/brand/organza-fashion.png" unoptimized width={48} /></span>
                 {storefrontMessages.ar.brand}
               </p>
               <h1 className="text-2xl font-semibold">تسجيل الدخول</h1>
